@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/theme';
 
 interface TabIconProps {
   name: 'home' | 'explore' | 'diet' | 'profile';
@@ -33,17 +32,7 @@ export const TabIcon: React.FC<TabIconProps> = ({
       break;
   }
 
-  try {
-    return <Ionicons name={iconName} size={size} color={color} />;
-  } catch {
-    return (
-      <View style={[styles.fallback, { borderColor: color }]}>
-        <Text style={[styles.fallbackText, { color }]}>
-          {name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-    );
-  }
+  return <Ionicons name={iconName} size={size} color={color} />;
 };
 
 const styles = StyleSheet.create({

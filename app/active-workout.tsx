@@ -163,22 +163,21 @@ export default function ActiveWorkoutScreen() {
   const restTimerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (isResting) {
-      if (restSecondsRemaining <= 0) {
-        setIsResting(false);
-        if (settings.workoutSettings.vibration) {
-          Vibration.vibrate([0, 200, 100, 200]);
+    if (!isResting) return;
+    const interval = setInterval(() => {
+      setRestSecondsRemaining((prev) => {
+        if (prev <= 1) {
+          setIsResting(false);
+          if (settings.workoutSettings.vibration) {
+            Vibration.vibrate([0, 200, 100, 200]);
+          }
+          return 0;
         }
-        return;
-      }
-      restTimerRef.current = setTimeout(() => {
-        setRestSecondsRemaining((prev) => Math.max(0, prev - 1));
-      }, 1000);
-    }
-    return () => {
-      if (restTimerRef.current) clearTimeout(restTimerRef.current);
-    };
-  }, [isResting, restSecondsRemaining, settings.workoutSettings.vibration]);
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isResting, settings.workoutSettings.vibration]);
 
   const startRestTimer = (seconds = restDuration) => {
     setRestSecondsRemaining(seconds);

@@ -44,9 +44,26 @@ export default function CreateWorkoutScreen() {
   const existingWorkout = params.editId ? getWorkoutById(params.editId) : undefined;
 
   const [workoutName, setWorkoutName] = useState(existingWorkout?.name || '');
-  const [selectedExercises, setSelectedExercises] = useState<CustomWorkoutExercise[]>(
-    existingWorkout?.exercises || []
-  );
+  const [selectedExercises, setSelectedExercises] = useState<CustomWorkoutExercise[]>(() => {
+    if (existingWorkout?.exercises) return existingWorkout.exercises;
+    if (params.initialExerciseId && !isEditing) {
+      const ex = FAKE_EXERCISES.find((e) => e.id === params.initialExerciseId);
+      if (ex) {
+        return [
+          {
+            exerciseId: ex.id,
+            name: ex.name,
+            bodyPart: ex.bodyPart,
+            thumbnail: ex.thumbnail,
+            sets: 3,
+            reps: 12,
+            kcalPerSet: Math.round(ex.kcal / 3) || 15,
+          },
+        ];
+      }
+    }
+    return [];
+  });
 
   const [showPicker, setShowPicker] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
@@ -65,26 +82,6 @@ export default function CreateWorkoutScreen() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
-
-  // If initialExerciseId was provided and not editing, pre-add that exercise
-  useEffect(() => {
-    if (params.initialExerciseId && !isEditing) {
-      const ex = allExercises.find((e) => e.id === params.initialExerciseId);
-      if (ex && selectedExercises.length === 0) {
-        setSelectedExercises([
-          {
-            exerciseId: ex.id,
-            name: ex.name,
-            bodyPart: ex.bodyPart,
-            thumbnail: ex.thumbnail,
-            sets: 3,
-            reps: 12,
-            kcalPerSet: Math.round(ex.kcal / 3) || 15,
-          },
-        ]);
-      }
-    }
-  }, [params.initialExerciseId, isEditing]);
 
   // Check if limit is reached for creating a new workout
   const isLimitReached = !isEditing && !isPremium && customWorkouts.length >= FREE_WORKOUT_LIMIT;

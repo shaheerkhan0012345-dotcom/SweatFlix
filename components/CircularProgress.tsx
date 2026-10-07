@@ -22,7 +22,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
   const circumference = 2 * Math.PI * radius;
   const progressPercent = target > 0 ? Math.min(completed / target, 1) : 0;
 
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [animatedValue] = React.useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -30,7 +30,7 @@ export const CircularProgress: React.FC<CircularProgressProps> = ({
       duration: 600,
       useNativeDriver: false,
     }).start();
-  }, [progressPercent]);
+  }, [animatedValue, progressPercent]);
 
   const strokeDashoffset = animatedValue.interpolate({
     inputRange: [0, 1],

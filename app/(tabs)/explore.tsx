@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,23 +33,27 @@ export default function ExploreScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBodyPart, setSelectedBodyPart] = useState<string>('All');
 
-  const fetchExercises = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await workoutService.getExercises();
-      setExercises(data);
-    } catch (e: any) {
-      console.warn('Error loading exercises:', e);
-      setError('Unable to load exercises. Please check your network.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchExercises();
-  }, [fetchExercises]);
+    let isMounted = true;
+    workoutService
+      .getExercises()
+      .then((data) => {
+        if (isMounted) {
+          setExercises(data);
+          setIsLoading(false);
+        }
+      })
+      .catch((e: any) => {
+        if (isMounted) {
+          console.warn('Error loading exercises:', e);
+          setError('Unable to load exercises. Please check your network.');
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter exercises by body part and search query
   const filteredExercises = useMemo(() => {

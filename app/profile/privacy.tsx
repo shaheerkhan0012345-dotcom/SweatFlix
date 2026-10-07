@@ -49,7 +49,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.sectionHeading}>4. Data Deletion</Text>
         <Text style={styles.paragraph}>
           You can completely wipe all local fitness data, settings, and workout history at any time using
-          the "Reset All App Data" option found in your Profile tab.
+          the &quot;Reset All App Data&quot; option found in your Profile tab.
         </Text>
 
         <Text style={styles.sectionHeading}>5. Contact Us</Text>

@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, G } from 'react-native-svg';
 import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -29,6 +30,7 @@ import {
   WorkoutItem,
   ExerciseDetail,
 } from '../data/fakeData';
+import { getExercise3DAsset } from '../constants/exerciseImages';
 
 interface LoggedSet {
   setNumber: number;
@@ -36,6 +38,15 @@ interface LoggedSet {
   reps: string;
   isCompleted: boolean;
 }
+
+const REST_OPTIONS = [
+  { label: '15 sec', value: 15 },
+  { label: '30 sec', value: 30 },
+  { label: '45 sec (RECOMMENDED)', value: 45 },
+  { label: '1 min', value: 60 },
+  { label: '2 mins', value: 120 },
+  { label: '3 mins', value: 180 },
+];
 
 export default function ActiveWorkoutScreen() {
   const router = useRouter();
@@ -145,9 +156,10 @@ export default function ActiveWorkoutScreen() {
   };
 
   // Rest Timer State
-  const defaultRestDuration = Number(settings.workoutSettings.restTimer) || 45;
+  const [restDuration, setRestDuration] = useState<number>(45);
+  const [showRestModal, setShowRestModal] = useState(false);
   const [isResting, setIsResting] = useState(false);
-  const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(defaultRestDuration);
+  const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(45);
   const restTimerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -168,7 +180,7 @@ export default function ActiveWorkoutScreen() {
     };
   }, [isResting, restSecondsRemaining, settings.workoutSettings.vibration]);
 
-  const startRestTimer = (seconds = defaultRestDuration) => {
+  const startRestTimer = (seconds = restDuration) => {
     setRestSecondsRemaining(seconds);
     setIsResting(true);
   };
@@ -189,7 +201,7 @@ export default function ActiveWorkoutScreen() {
         if (settings.workoutSettings.vibration) {
           Vibration.vibrate(50);
         }
-        startRestTimer(defaultRestDuration);
+        startRestTimer(restDuration);
       }
 
       return {
@@ -243,7 +255,6 @@ export default function ActiveWorkoutScreen() {
   });
 
   const handleFinishWorkout = async () => {
-    // Calculate total stats
     let totalCompletedSets = 0;
     let volumeKg = 0;
 
@@ -272,7 +283,6 @@ export default function ActiveWorkoutScreen() {
     setWorkoutSummaryStats(stats);
     setShowSummaryModal(true);
 
-    // Persist to HomeProgressContext and Supabase
     const workoutName = targetWorkout?.name || singleExercise?.name || 'Workout Session';
     await markTodayAsDone(workoutName, calculatedKcal);
 
@@ -289,7 +299,7 @@ export default function ActiveWorkoutScreen() {
   const handleConfirmExit = () => {
     Alert.alert(
       'Exit Workout?',
-      'Are you sure you want to end your current active session? Progress for uncompleted sets will be lost.',
+      'Are you sure you want to end your active session? Uncompleted sets will not be recorded.',
       [
         { text: 'Keep Going', style: 'cancel' },
         {
@@ -303,6 +313,14 @@ export default function ActiveWorkoutScreen() {
 
   const currentSets = setsByExercise[currentExerciseIndex] || [];
   const completedSetsCount = currentSets.filter((s) => s.isCompleted).length;
+  const active3DImage = getExercise3DAsset(activeEx.bodyPart, activeEx.thumbnail);
+
+  // Circular timer calculations
+  const timerRadius = 70;
+  const timerStrokeWidth = 10;
+  const timerCircumference = 2 * Math.PI * timerRadius;
+  const timerPercent = restDuration > 0 ? restSecondsRemaining / restDuration : 0;
+  const timerStrokeDashoffset = timerCircumference - timerCircumference * timerPercent;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safeArea}>
@@ -339,80 +357,140 @@ export default function ActiveWorkoutScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 2. Exercise Indicator & Muscle Pill */}
+        {/* 2. Exercise Indicator & Rest Interval Setting Button */}
         <View style={styles.exerciseNavRow}>
           <Text style={styles.exerciseCountText}>
             EXERCISE {currentExerciseIndex + 1} OF {exercisesList.length}
           </Text>
-          <View style={styles.bodyPartPill}>
-            <Ionicons name="fitness-outline" size={13} color={Colors.primary} />
-            <Text style={styles.bodyPartPillText}>{activeEx.bodyPart}</Text>
-          </View>
+
+          <TouchableOpacity
+            style={styles.restConfigPill}
+            onPress={() => setShowRestModal(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="hourglass-outline" size={13} color={Colors.primary} />
+            <Text style={styles.restConfigText}>Rest: {restDuration}s</Text>
+            <Ionicons name="chevron-down" size={12} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
-        {/* 3. Active Exercise Showcase Card */}
+        {/* 3. 3D Athletic Movement Showcase Card (Gym Faction Style with SweatFlix Theme) */}
         <Card style={styles.exerciseHeroCard}>
-          <View style={styles.exerciseHeroTop}>
+          <View style={styles.image3DWrap}>
             <Image
-              source={{ uri: activeEx.thumbnail }}
-              style={styles.exerciseHeroImage}
+              source={active3DImage}
+              style={styles.image3D}
               resizeMode="cover"
             />
-            <View style={styles.exerciseHeroInfo}>
+            <View style={styles.modelTagOverlay}>
+              <View style={styles.pulseDot} />
+              <Text style={styles.modelTagText}>3D ANATOMICAL ACTIVE</Text>
+            </View>
+          </View>
+
+          <View style={styles.exerciseInfoArea}>
+            <View style={styles.exerciseTitleRow}>
               <Text style={styles.activeExerciseTitle}>{activeEx.name}</Text>
-              <Text style={styles.activeExerciseTarget}>
-                Target: {activeEx.reps} • {activeEx.sets} sets
-              </Text>
-              <Text style={styles.completedCountNote}>
-                {completedSetsCount} / {currentSets.length} sets completed
-              </Text>
+              <View style={styles.bodyPartPill}>
+                <Text style={styles.bodyPartPillText}>{activeEx.bodyPart}</Text>
+              </View>
+            </View>
+
+            {/* 3 Stat Boxes matching reference video */}
+            <View style={styles.statBoxesRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>REPS</Text>
+                <Text style={styles.statBoxVal}>{activeEx.reps}</Text>
+              </View>
+              <View style={styles.statBoxDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>WEIGHT</Text>
+                <Text style={styles.statBoxVal}>20 LBS</Text>
+              </View>
+              <View style={styles.statBoxDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statBoxLabel}>STEP</Text>
+                <Text style={styles.statBoxVal}>
+                  {completedSetsCount + 1}/{currentSets.length}
+                </Text>
+              </View>
             </View>
           </View>
         </Card>
 
-        {/* 4. Rest Timer Bar (Visible when resting) */}
+        {/* 4. Circular Rest Countdown Overlay / Card (When Resting) */}
         {isResting && (
-          <View style={styles.restTimerBanner}>
-            <View style={styles.restTimerLeft}>
-              <View style={styles.restPulseDot} />
-              <Text style={styles.restTitle}>RESTING INTERVAL</Text>
-              <Text style={styles.restSecondsText}>
-                {restSecondsRemaining}s
-              </Text>
+          <Card style={styles.circularRestCard}>
+            <Text style={styles.restTitle}>REST INTERVAL COUNTDOWN</Text>
+
+            <View style={styles.circularTimerWrap}>
+              <Svg width={160} height={160}>
+                <G rotation="-90" origin="80, 80">
+                  <Circle
+                    cx={80}
+                    cy={80}
+                    r={timerRadius}
+                    stroke="#F1F5F9"
+                    strokeWidth={timerStrokeWidth}
+                    fill="none"
+                  />
+                  <Circle
+                    cx={80}
+                    cy={80}
+                    r={timerRadius}
+                    stroke={Colors.primary}
+                    strokeWidth={timerStrokeWidth}
+                    strokeDasharray={`${timerCircumference} ${timerCircumference}`}
+                    strokeDashoffset={timerStrokeDashoffset}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </G>
+              </Svg>
+
+              <View style={styles.circularTimerCenter}>
+                <Text style={styles.circularTimerNum}>{restSecondsRemaining}</Text>
+                <Text style={styles.circularTimerUnit}>SECONDS</Text>
+              </View>
             </View>
 
-            <View style={styles.restTimerControls}>
+            {/* Quick Adjustment Controls */}
+            <View style={styles.restControlsRow}>
               <TouchableOpacity
-                style={styles.restAdjustBtn}
+                style={styles.restAdjBtn}
                 onPress={() => setRestSecondsRemaining((prev) => Math.max(5, prev - 15))}
+                activeOpacity={0.7}
               >
-                <Text style={styles.restAdjustText}>-15s</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.restAdjustBtn}
-                onPress={() => setRestSecondsRemaining((prev) => prev + 15)}
-              >
-                <Text style={styles.restAdjustText}>+15s</Text>
+                <Text style={styles.restAdjBtnText}>-15s</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.skipRestBtn}
                 onPress={() => setIsResting(false)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.skipRestText}>Skip</Text>
+                <Ionicons name="play-skip-forward" size={16} color="#FFFFFF" />
+                <Text style={styles.skipRestBtnText}>Skip Rest</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.restAdjBtn}
+                onPress={() => setRestSecondsRemaining((prev) => prev + 15)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.restAdjBtnText}>+15s</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Card>
         )}
 
         {/* 5. Interactive Set Logger Table */}
         <Card style={styles.setTableCard}>
           <View style={styles.tableHeaderRow}>
-            <Text style={[styles.colHeader, { width: 36 }]}>SET</Text>
-            <Text style={[styles.colHeader, { flex: 1 }]}>WEIGHT (KG)</Text>
+            <Text style={[styles.colHeader, { width: 44 }]}>SET</Text>
+            <Text style={[styles.colHeader, { flex: 1 }]}>WEIGHT (LBS)</Text>
             <Text style={[styles.colHeader, { flex: 1 }]}>REPS</Text>
-            <Text style={[styles.colHeader, { width: 44, textAlign: 'center' }]}>DONE</Text>
+            <Text style={[styles.colHeader, { width: 48, textAlign: 'center' }]}>DONE</Text>
           </View>
 
           {currentSets.map((s, idx) => (
@@ -433,7 +511,7 @@ export default function ActiveWorkoutScreen() {
                   value={s.weight}
                   keyboardType="numeric"
                   onChangeText={(txt) => handleUpdateWeight(idx, txt)}
-                  placeholder="0"
+                  placeholder="20"
                   placeholderTextColor={Colors.textGrey}
                 />
               </View>
@@ -444,7 +522,7 @@ export default function ActiveWorkoutScreen() {
                   value={s.reps}
                   keyboardType="numeric"
                   onChangeText={(txt) => handleUpdateReps(idx, txt)}
-                  placeholder="0"
+                  placeholder="12"
                   placeholderTextColor={Colors.textGrey}
                 />
               </View>
@@ -458,8 +536,8 @@ export default function ActiveWorkoutScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons
-                  name={s.isCompleted ? 'checkmark' : 'checkmark-outline'}
-                  size={18}
+                  name={s.isCompleted ? 'checkmark' : 'ellipse-outline'}
+                  size={20}
                   color={s.isCompleted ? '#FFFFFF' : Colors.textGrey}
                 />
               </TouchableOpacity>
@@ -513,7 +591,7 @@ export default function ActiveWorkoutScreen() {
             />
           ) : (
             <Button
-              title="Complete Workout 🏆"
+              title="Finish Workout ✓"
               variant="primary"
               style={styles.navBtn}
               onPress={handleFinishWorkout}
@@ -522,54 +600,101 @@ export default function ActiveWorkoutScreen() {
         </View>
       </ScrollView>
 
-      {/* 8. Victory Workout Summary Modal */}
-      <Modal
-        visible={showSummaryModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => router.replace('/(tabs)')}
-      >
+      {/* Rest Interval Selection Modal (From Video) */}
+      <Modal visible={showRestModal} transparent animationType="slide">
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.trophyCircle}>
-              <Ionicons name="trophy" size={44} color="#FFD700" />
+          <View style={styles.restModalCard}>
+            <View style={styles.restModalHeader}>
+              <Text style={styles.restModalTitle}>Set Rest Duration</Text>
+              <TouchableOpacity
+                onPress={() => setShowRestModal(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={22} color={Colors.textDark} />
+              </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalTitle}>Workout Finished!</Text>
-            <Text style={styles.modalSub}>
-              Crushed another high-energy session. Consistency builds champions!
+            <Text style={styles.restModalSubtitle}>
+              Choose how long you pause between sets to maximize hypertrophy and endurance.
             </Text>
 
-            <View style={styles.statsGrid}>
-              <View style={styles.statBox}>
+            <View style={styles.restOptionsList}>
+              {REST_OPTIONS.map((opt) => {
+                const isSelected = restDuration === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.restOptionItem,
+                      isSelected && styles.restOptionItemActive,
+                    ]}
+                    onPress={() => {
+                      setRestDuration(opt.value);
+                      setShowRestModal(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.restOptionText,
+                        isSelected && styles.restOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Workout Complete Summary Modal */}
+      <Modal visible={showSummaryModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.summaryModalCard}>
+            <View style={styles.trophyCircle}>
+              <Ionicons name="trophy" size={40} color="#FFD700" />
+            </View>
+
+            <Text style={styles.summaryModalTitle}>Workout Crushed! 🔥</Text>
+            <Text style={styles.summaryModalSub}>
+              Tremendous discipline. Your progress has been logged to your daily streak and Supabase records.
+            </Text>
+
+            <View style={styles.summaryStatsGrid}>
+              <View style={styles.summaryStatBox}>
                 <Ionicons name="time-outline" size={20} color={Colors.primary} />
-                <Text style={styles.statBoxNum}>{workoutSummaryStats.durationStr}</Text>
-                <Text style={styles.statBoxLabel}>Total Time</Text>
+                <Text style={styles.summaryStatVal}>{workoutSummaryStats.durationStr}</Text>
+                <Text style={styles.summaryStatLabel}>Duration</Text>
               </View>
 
-              <View style={styles.statBox}>
-                <Ionicons name="layers-outline" size={20} color={Colors.accent} />
-                <Text style={styles.statBoxNum}>{workoutSummaryStats.totalSets}</Text>
-                <Text style={styles.statBoxLabel}>Sets Finished</Text>
+              <View style={styles.summaryStatBox}>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
+                <Text style={styles.summaryStatVal}>{workoutSummaryStats.totalSets}</Text>
+                <Text style={styles.summaryStatLabel}>Sets Done</Text>
               </View>
 
-              <View style={styles.statBox}>
-                <Ionicons name="barbell-outline" size={20} color="#10B981" />
-                <Text style={styles.statBoxNum}>{workoutSummaryStats.totalVolumeKg} kg</Text>
-                <Text style={styles.statBoxLabel}>Total Volume</Text>
+              <View style={styles.summaryStatBox}>
+                <Ionicons name="barbell-outline" size={20} color={Colors.accent} />
+                <Text style={styles.summaryStatVal}>{workoutSummaryStats.totalVolumeKg} LBS</Text>
+                <Text style={styles.summaryStatLabel}>Volume</Text>
               </View>
 
-              <View style={styles.statBox}>
-                <Ionicons name="flame-outline" size={20} color="#FF5A00" />
-                <Text style={styles.statBoxNum}>{workoutSummaryStats.kcalBurned} kcal</Text>
-                <Text style={styles.statBoxLabel}>Burned</Text>
+              <View style={styles.summaryStatBox}>
+                <Ionicons name="flame-outline" size={20} color="#EF4444" />
+                <Text style={styles.summaryStatVal}>{workoutSummaryStats.kcalBurned} kcal</Text>
+                <Text style={styles.summaryStatLabel}>Burned</Text>
               </View>
             </View>
 
             <Button
-              title="Done & Return Home"
+              title="Return to Home"
               variant="primary"
-              style={styles.returnHomeBtn}
               onPress={() => {
                 setShowSummaryModal(false);
                 router.replace('/(tabs)');
@@ -585,7 +710,7 @@ export default function ActiveWorkoutScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   headerBar: {
     flexDirection: 'row',
@@ -594,20 +719,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-    backgroundColor: Colors.background,
+    borderBottomColor: '#F1F5F9',
   },
   closeBtn: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F8F9FA',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
     marginHorizontal: Spacing.sm,
   },
   workoutNameText: {
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.heavy,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.bold,
     color: Colors.textDark,
   },
   timerBadge: {
@@ -618,162 +747,249 @@ const styles = StyleSheet.create({
   },
   timerText: {
     fontSize: Typography.sizes.xs,
-    fontWeight: Typography.weights.bold,
     color: Colors.primary,
+    fontWeight: Typography.weights.heavy,
   },
   finishHeaderBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 20,
+    borderRadius: 14,
   },
   finishHeaderBtnText: {
     color: '#FFFFFF',
     fontWeight: Typography.weights.bold,
-    fontSize: Typography.sizes.xs,
+    fontSize: 11,
     letterSpacing: 0.5,
   },
   scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: 48,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.xxl + 20,
   },
   exerciseNavRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   exerciseCountText: {
-    fontSize: 11,
+    fontSize: Typography.sizes.xs,
     fontWeight: Typography.weights.heavy,
     color: Colors.textGrey,
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
-  bodyPartPill: {
+  restConfigPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: '#FFEAEA',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 14,
+    gap: 4,
+  },
+  restConfigText: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
+  },
+  exerciseHeroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.card,
+    padding: 0,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: Spacing.md,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  image3DWrap: {
+    width: '100%',
+    height: 220,
+    position: 'relative',
+    backgroundColor: '#F8F9FA',
+  },
+  image3D: {
+    width: '100%',
+    height: '100%',
+  },
+  modelTagOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  modelTagText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 0.5,
+  },
+  exerciseInfoArea: {
+    padding: Spacing.md,
+  },
+  exerciseTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  activeExerciseTitle: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.heavy,
+    color: Colors.textDark,
+    flex: 1,
+  },
+  bodyPartPill: {
+    backgroundColor: '#FFEAEA',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   bodyPartPillText: {
     fontSize: 11,
     fontWeight: Typography.weights.bold,
     color: Colors.primary,
   },
-  exerciseHeroCard: {
-    padding: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  exerciseHeroTop: {
+  statBoxesRow: {
     flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+    borderRadius: BorderRadius.button,
+    paddingVertical: 10,
     alignItems: 'center',
-    gap: Spacing.md,
+    justifyContent: 'space-around',
   },
-  exerciseHeroImage: {
-    width: 74,
-    height: 74,
-    borderRadius: BorderRadius.md,
-    backgroundColor: '#EAEAEA',
-  },
-  exerciseHeroInfo: {
+  statBox: {
+    alignItems: 'center',
     flex: 1,
   },
-  activeExerciseTitle: {
-    fontSize: Typography.sizes.md,
-    fontWeight: Typography.weights.bold,
-    color: Colors.textDark,
-  },
-  activeExerciseTarget: {
-    fontSize: Typography.sizes.xs,
+  statBoxLabel: {
+    fontSize: 10,
     color: Colors.textGrey,
+    fontWeight: Typography.weights.bold,
+  },
+  statBoxVal: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.heavy,
+    color: Colors.textDark,
     marginTop: 2,
   },
-  completedCountNote: {
-    fontSize: 11,
-    fontWeight: Typography.weights.semiBold,
-    color: Colors.accent,
-    marginTop: 4,
+  statBoxDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: '#E2E8F0',
   },
-  restTimerBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#1E293B',
+  circularRestCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.card,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  restTimerLeft: {
-    flexDirection: 'row',
+    padding: Spacing.lg,
     alignItems: 'center',
-    gap: 8,
-  },
-  restPulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#38BDF8',
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#FFEAEA',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   restTitle: {
     fontSize: 11,
-    fontWeight: Typography.weights.bold,
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-  },
-  restSecondsText: {
-    fontSize: Typography.sizes.lg,
     fontWeight: Typography.weights.heavy,
-    color: '#FFFFFF',
-    marginLeft: 4,
+    color: Colors.primary,
+    letterSpacing: 1,
+    marginBottom: Spacing.sm,
   },
-  restTimerControls: {
+  circularTimerWrap: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 160,
+    height: 160,
+    marginVertical: 4,
+  },
+  circularTimerCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circularTimerNum: {
+    fontSize: 38,
+    fontWeight: Typography.weights.heavy,
+    color: Colors.textDark,
+  },
+  circularTimerUnit: {
+    fontSize: 10,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textGrey,
+    letterSpacing: 1,
+  },
+  restControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: Spacing.md,
+  },
+  restAdjBtn: {
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  restAdjBtnText: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textDark,
+  },
+  skipRestBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  restAdjustBtn: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  restAdjustText: {
-    color: '#F8FAFC',
-    fontSize: 11,
-    fontWeight: Typography.weights.bold,
-  },
-  skipRestBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  skipRestText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+  skipRestBtnText: {
+    fontSize: Typography.sizes.xs,
     fontWeight: Typography.weights.bold,
+    color: '#FFFFFF',
   },
   setTableCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.card,
     padding: Spacing.md,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   tableHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingBottom: Spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-    marginBottom: Spacing.xs,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 6,
   },
   colHeader: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: Typography.weights.heavy,
     color: Colors.textGrey,
     letterSpacing: 0.5,
@@ -782,57 +998,52 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F6F6F6',
+    gap: 8,
   },
   setRowCompleted: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 6,
+    opacity: 0.85,
   },
   setNumberCircle: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
   },
   setNumberText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: Typography.weights.bold,
     color: Colors.textDark,
   },
   inputWrap: {
     flex: 1,
-    paddingHorizontal: 4,
   },
   inputBox: {
     backgroundColor: '#F8F9FA',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 8,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     textAlign: 'center',
     fontSize: Typography.sizes.sm,
-    fontWeight: Typography.weights.bold,
     color: Colors.textDark,
+    fontWeight: Typography.weights.semiBold,
   },
   inputCompleted: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-    color: '#15803D',
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
   },
   checkBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 6,
   },
   checkBtnPending: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8F9FA',
   },
   checkBtnDone: {
     backgroundColor: '#10B981',
@@ -841,9 +1052,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    marginTop: Spacing.xs,
     gap: 6,
+    paddingVertical: 10,
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F8F9FA',
   },
   addSetBtnText: {
     fontSize: Typography.sizes.xs,
@@ -851,91 +1064,133 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   anatomySection: {
-    marginBottom: Spacing.md,
+    alignItems: 'center',
+    marginVertical: Spacing.md,
   },
   anatomyTitle: {
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.bold,
     color: Colors.textDark,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   bottomNavRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    gap: 12,
+    marginTop: Spacing.sm,
   },
   navBtn: {
     flex: 1,
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: Spacing.lg,
   },
-  modalCard: {
+  restModalCard: {
     width: '100%',
-    backgroundColor: Colors.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: BorderRadius.card,
-    padding: Spacing.lg,
+    padding: Spacing.xl,
+  },
+  restModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
+    marginBottom: 6,
+  },
+  restModalTitle: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.heavy,
+    color: Colors.textDark,
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  restModalSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textGrey,
+    marginBottom: Spacing.lg,
+  },
+  restOptionsList: {
+    gap: 10,
+  },
+  restOptionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    borderRadius: BorderRadius.button,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  restOptionItemActive: {
+    backgroundColor: '#FFEAEA',
+    borderColor: Colors.primary,
+  },
+  restOptionText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semiBold,
+    color: Colors.textDark,
+  },
+  restOptionTextActive: {
+    color: Colors.primary,
+    fontWeight: Typography.weights.bold,
+  },
+  summaryModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.card,
+    padding: Spacing.xl,
+    alignItems: 'center',
   },
   trophyCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FEF3C7',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FEF9C3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  modalTitle: {
+  summaryModalTitle: {
     fontSize: Typography.sizes.xl,
     fontWeight: Typography.weights.heavy,
     color: Colors.textDark,
+    marginBottom: 6,
   },
-  modalSub: {
+  summaryModalSub: {
     fontSize: Typography.sizes.xs,
     color: Colors.textGrey,
     textAlign: 'center',
-    marginTop: 4,
-    marginBottom: Spacing.md,
-    lineHeight: 18,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    width: '100%',
     marginBottom: Spacing.lg,
   },
-  statBox: {
-    width: '48%',
-    backgroundColor: '#F8F9FA',
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
+  summaryStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: Spacing.xl,
+    width: '100%',
   },
-  statBoxNum: {
+  summaryStatBox: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: 4,
+  },
+  summaryStatVal: {
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.heavy,
     color: Colors.textDark,
-    marginTop: 4,
   },
-  statBoxLabel: {
+  summaryStatLabel: {
     fontSize: 10,
-    fontWeight: Typography.weights.medium,
     color: Colors.textGrey,
-    marginTop: 1,
-  },
-  returnHomeBtn: {
-    width: '100%',
   },
 });

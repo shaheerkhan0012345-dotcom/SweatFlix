@@ -20,6 +20,7 @@ import { usePremium } from '../context/PremiumContext';
 import { useCustomWorkouts } from '../context/CustomWorkoutsContext';
 import { FAKE_EXERCISES, ExerciseDetail } from '../data/fakeData';
 import { workoutService } from '../services/workoutService';
+import { getExercise3DAsset } from '../constants/exerciseImages';
 
 const EXERCISE_PRO_GUIDES: Record<
   string,
@@ -148,6 +149,9 @@ export default function ExerciseDetailScreen() {
     });
   };
 
+  const [mediaMode, setMediaMode] = useState<'3d' | 'video'>('3d');
+  const exercise3D = getExercise3DAsset(exercise.bodyPart, exercise.thumbnail);
+
   return (
     <ScreenContainer scrollable contentContainerStyle={styles.container}>
       {/* Top Header Bar with Back Button */}
@@ -171,8 +175,53 @@ export default function ExerciseDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Media Section: Video or Locked Preview */}
-      {isLocked ? (
+      {/* Media Mode Selector (3D Anatomy Model vs Video Guide) */}
+      <View style={styles.mediaSwitchRow}>
+        <TouchableOpacity
+          style={[styles.mediaSwitchBtn, mediaMode === '3d' && styles.mediaSwitchBtnActive]}
+          onPress={() => setMediaMode('3d')}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="body"
+            size={14}
+            color={mediaMode === '3d' ? '#FFFFFF' : Colors.textDark}
+          />
+          <Text style={[styles.mediaSwitchText, mediaMode === '3d' && styles.mediaSwitchTextActive]}>
+            🧬 3D Anatomy Model
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mediaSwitchBtn, mediaMode === 'video' && styles.mediaSwitchBtnActive]}
+          onPress={() => setMediaMode('video')}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="videocam"
+            size={14}
+            color={mediaMode === 'video' ? '#FFFFFF' : Colors.textDark}
+          />
+          <Text style={[styles.mediaSwitchText, mediaMode === 'video' && styles.mediaSwitchTextActive]}>
+            🎬 Video Guide
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Media Section: 3D Model Card or Video Player */}
+      {mediaMode === '3d' ? (
+        <Card style={styles.model3DCard}>
+          <Image
+            source={exercise3D}
+            style={styles.model3DImage}
+            resizeMode="cover"
+          />
+          <View style={styles.model3DBadge}>
+            <View style={styles.model3DPulse} />
+            <Text style={styles.model3DBadgeText}>TARGET MUSCLE ACTIVATION</Text>
+          </View>
+        </Card>
+      ) : isLocked ? (
         <View style={styles.lockedMediaContainer}>
           <Image
             source={{ uri: exercise.thumbnail }}
@@ -844,5 +893,71 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: Typography.weights.bold,
     fontSize: Typography.sizes.sm,
+  },
+  mediaSwitchRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+    borderRadius: BorderRadius.button,
+    padding: 3,
+    marginBottom: Spacing.sm,
+    gap: 4,
+  },
+  mediaSwitchBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: BorderRadius.button - 2,
+    gap: 6,
+  },
+  mediaSwitchBtnActive: {
+    backgroundColor: Colors.primary,
+  },
+  mediaSwitchText: {
+    fontSize: 11,
+    fontWeight: Typography.weights.bold,
+    color: Colors.textDark,
+  },
+  mediaSwitchTextActive: {
+    color: '#FFFFFF',
+  },
+  model3DCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: BorderRadius.card,
+    padding: 0,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    position: 'relative',
+    height: 240,
+  },
+  model3DImage: {
+    width: '100%',
+    height: '100%',
+  },
+  model3DBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  model3DPulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  model3DBadgeText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: Typography.weights.bold,
+    letterSpacing: 0.5,
   },
 });

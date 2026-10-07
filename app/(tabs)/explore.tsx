@@ -19,6 +19,7 @@ import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme
 import { usePremium } from '../../context/PremiumContext';
 import { ExerciseDetail } from '../../data/fakeData';
 import { workoutService } from '../../services/workoutService';
+import { getExercise3DAsset } from '../../constants/exerciseImages';
 
 const BODY_PART_CHIPS = ['All', 'Chest', 'Back', 'Shoulders', 'Arms', 'Abs', 'Legs'] as const;
 
@@ -72,6 +73,8 @@ export default function ExploreScreen() {
   const renderExerciseCard = ({ item }: { item: ExerciseDetail }) => {
     const isLocked = item.isPremium && !isPremium;
 
+    const exerciseImg = getExercise3DAsset(item.bodyPart, item.thumbnail);
+
     return (
       <TouchableOpacity
         activeOpacity={0.85}
@@ -80,10 +83,15 @@ export default function ExploreScreen() {
       >
         <View style={styles.thumbnailWrap}>
           <Image
-            source={{ uri: item.thumbnail }}
+            source={exerciseImg}
             style={styles.thumbnail}
             resizeMode="cover"
           />
+
+          {/* 3D Badge */}
+          <View style={styles.badge3D}>
+            <Text style={styles.badge3DText}>3D</Text>
+          </View>
 
           {/* Level Tag */}
           <View style={styles.levelTag}>
@@ -444,5 +452,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Spacing.xs,
     paddingHorizontal: Spacing.lg,
+  },
+  badge3D: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badge3DText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

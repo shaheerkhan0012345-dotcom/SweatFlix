@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/theme';
 
 interface TabIconProps {
-  name: 'home' | 'explore' | 'profile';
+  name: 'home' | 'explore' | 'diet' | 'profile';
   color: any;
   focused: boolean;
   size?: number;
@@ -23,7 +23,10 @@ export const TabIcon: React.FC<TabIconProps> = ({
       iconName = focused ? 'home' : 'home-outline';
       break;
     case 'explore':
-      iconName = focused ? 'compass' : 'compass-outline';
+      iconName = focused ? 'fitness' : 'fitness-outline';
+      break;
+    case 'diet':
+      iconName = focused ? 'restaurant' : 'restaurant-outline';
       break;
     case 'profile':
       iconName = focused ? 'person' : 'person-outline';

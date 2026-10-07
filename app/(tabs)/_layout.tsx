@@ -79,13 +79,24 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          headerTitle: 'Explore',
-          tabBarLabel: 'Explore',
+          title: 'Workouts',
+          headerTitle: 'Workout Library',
+          tabBarLabel: 'Workouts',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="explore" color={color} focused={focused} />
           ),
           headerRight: () => <ExploreHeaderButton />,
+        }}
+      />
+      <Tabs.Screen
+        name="diet"
+        options={{
+          title: 'Diet Plan',
+          headerTitle: 'Diet & Nutrition',
+          tabBarLabel: 'Diet',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="diet" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen

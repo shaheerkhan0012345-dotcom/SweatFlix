@@ -1,0 +1,77 @@
+{
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "freeMember": "Free Member",
+    "proMember": "PRO Member",
+    "stats": {
+      "currentWeight": "Current Weight",
+      "goalWeight": "Goal Weight",
+      "caloriesBurned": "Calories Burned",
+      "workoutsDone": "Workouts Done",
+      "currentStreak": "Day Streak"
+    },
+    "chart": {
+      "title": "7-Day Activity",
+      "sub": "Daily workouts completed this week",
+      "empty": "No workout activity recorded this week yet."
+    },
+    "premium": {
+      "bannerTitle": "Upgrade to SweatFlix PRO",
+      "bannerSub": "Unlock all 36+ exercises, unlimited custom workouts, and ad-free guidance.",
+      "activeTitle": "You're a PRO Member",
+      "activeSub": "Unlimited workouts, all exercises unlocked, and zero ads."
+    },
+    "sections": {
+      "workoutSettings": "Workout Settings",
+      "generalSettings": "General Settings",
+      "language": "Language",
+      "support": "Support",
+      "feedback": "Send Feedback",
+      "rateUs": "Rate Us on App Store",
+      "removeAds": "Remove Ads",
+      "about": "About",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "version": "App Version"
+    },
+    "actions": {
+      "logout": "Log Out",
+      "resetData": "Reset All App Data",
+      "resetConfirmTitle": "Reset All Data?",
+      "resetConfirmSub": "This will wipe all onboarding answers, custom workouts, streak, and local settings. This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Reset Everything"
+    }
+  },
+  "language": {
+    "title": "Language",
+    "subtitle": "Select your app display language",
+    "comingSoon": "Coming soon",
+    "note": "SweatFlix is currently localized in English. Additional language packages will be unlocked in upcoming releases."
+  },
+  "feedback": {
+    "title": "Send Feedback",
+    "subtitle": "Help us improve your workout journey",
+    "ratingPrompt": "How would you rate your experience?",
+    "categoryPrompt": "Select a category",
+    "messagePrompt": "Your feedback or suggestion",
+    "messagePlaceholder": "Tell us what you love or what we could improve (min. 10 characters)...",
+    "submit": "Send Feedback",
+    "success": "Thanks for your feedback! 🙏"
+  },
+  "removeAds": {
+    "title": "Remove Ads",
+    "headline": "Enjoy SweatFlix ad-free",
+    "subtitle": "Get an uninterrupted, laser-focused workout experience without any banner distractions.",
+    "benefit1": "Zero banner and interstitial ads forever",
+    "benefit2": "Faster, distraction-free screen transitions",
+    "benefit3": "Supports ongoing independent workout content development",
+    "oneTimePrice": "One-time purchase",
+    "button": "Remove Ads - $1.99",
+    "alreadyRemoved": "Ads are already removed 🎉",
+    "alreadyRemovedSub": "You have full ad-free access on SweatFlix.",
+    "resetTest": "Reset Ads (Test Mode)",
+    "success": "Ads removed! 🎉"
+  }
+}

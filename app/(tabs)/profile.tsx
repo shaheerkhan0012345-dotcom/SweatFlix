@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Modal,
   Alert,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as StoreReview from 'expo-store-review';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +26,13 @@ import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { useHealthMetrics } from '../../context/HealthMetricsContext';
 import { isTestToolsEnabled } from '../../lib/config';
+import { communityService, CommunityPost, getAvatarColor } from '../../services/communityService';
+import { friendsService } from '../../services/friendsService';
+import { leaderboardService, getLevelInfo } from '../../services/leaderboardService';
+import { LeagueTierBadge } from '../../components/LeagueTierBadge';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const THUMB_SIZE = (SCREEN_WIDTH - 48 - 8) / 3;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -37,6 +46,41 @@ export default function ProfileScreen() {
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Step 9b: User posts and friends count
+  const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
+  const [friendsCount, setFriendsCount] = useState<number>(0);
+  const [weeklyPoints, setWeeklyPoints] = useState<number>(0);
+  const [loadingPosts, setLoadingPosts] = useState<boolean>(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      if (profile?.id) {
+        Promise.all([
+          communityService.getUserPosts({ targetUserId: profile.id, viewerId: profile.id, limit: 12 }),
+          friendsService.getFriendsList(profile.id),
+          leaderboardService.getUserPointsThisWeek(profile.id),
+        ])
+          .then(([posts, friends, weekPts]) => {
+            if (isMounted) {
+              setMyPosts(posts);
+              setFriendsCount(friends.length);
+              setWeeklyPoints(weekPts);
+              setLoadingPosts(false);
+            }
+          })
+          .catch(() => {
+            if (isMounted) setLoadingPosts(false);
+          });
+      } else {
+        setLoadingPosts(false);
+      }
+      return () => {
+        isMounted = false;
+      };
+    }, [profile])
+  );
 
   const displayName = profile?.name || settings.name || 'Champ';
   const isImperial = settings.workoutSettings.units === 'imperial';
@@ -56,6 +100,8 @@ export default function ProfileScreen() {
   const totalWorkouts = progress.totalWorkouts || progress.completedCount;
   const todayIndex = getTodayDayIndex();
   const userInitial = displayName.charAt(0).toUpperCase();
+  const totalLifetimePoints = profile?.total_points || 0;
+  const levelInfo = getLevelInfo(totalLifetimePoints);
 
   const handleRateUs = async () => {
     try {
@@ -92,16 +138,32 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer scrollable edges={['left', 'right']} contentContainerStyle={styles.container}>
-      {/* 1. Header Card */}
+      {/* 1. Header Card with Avatar, @username, Bio, and Counts */}
       <Card style={styles.headerCard}>
         <View style={styles.headerRow}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{userInitial}</Text>
-          </View>
+          {profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={styles.profileAvatarImg} />
+          ) : (
+            <View
+              style={[
+                styles.avatarCircle,
+                { backgroundColor: getAvatarColor(profile?.id || 'self') },
+              ]}
+            >
+              <Text style={styles.avatarText}>{userInitial}</Text>
+            </View>
+          )}
 
           <View style={styles.headerInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.userName}>{displayName}</Text>
+              <LeagueTierBadge
+                tier={profile?.league_tier || 'Bronze'}
+                size="small"
+                showCrown={Boolean(profile?.is_weekly_champion)}
+                onPress={() => router.push('/community/league' as any)}
+                style={{ marginLeft: 6 }}
+              />
               {isPremium ? (
                 <View style={styles.proPill}>
                   <Text style={styles.proPillText}>👑 PRO</Text>
@@ -112,9 +174,14 @@ export default function ProfileScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.userSub}>
-              {onboardingState.fitnessLevel || 'Fitness Enthusiast'}
+            <Text style={styles.userUsername}>
+              {profile?.username ? `@${profile.username}` : 'No username set'}
             </Text>
+            {profile?.bio ? (
+              <Text style={styles.userBio} numberOfLines={2}>
+                {profile.bio}
+              </Text>
+            ) : null}
           </View>
 
           <TouchableOpacity
@@ -126,6 +193,171 @@ export default function ProfileScreen() {
             <Text style={styles.editProfileBtnText}>{t('profile.editProfile')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Counts Row: Posts & Friends */}
+        <View style={styles.countsRow}>
+          <View style={styles.countItem}>
+            <Text style={styles.countValue}>{myPosts.length}</Text>
+            <Text style={styles.countLabel}>Posts</Text>
+          </View>
+          <View style={styles.countDivider} />
+          <TouchableOpacity
+            style={styles.countItem}
+            onPress={() => router.push('/community/friends' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.countValue}>{friendsCount}</Text>
+            <Text style={styles.countLabel}>Friends</Text>
+          </TouchableOpacity>
+        </View>
+      </Card>
+
+      {/* Step 9d: Level Tier, This Week's Points, and All-Time Progress Bar */}
+      <Card style={styles.levelCard}>
+        <View style={styles.levelCardHeader}>
+          <View style={styles.levelBadgeWrap}>
+            <View style={[styles.levelBadge, { backgroundColor: levelInfo.badgeColor }]}>
+              <Ionicons name="shield-checkmark" size={13} color="#FFFFFF" />
+              <Text style={styles.levelBadgeText}>{levelInfo.currentLevel}</Text>
+            </View>
+            <Text style={styles.levelPointsSubtitle}>
+              {totalLifetimePoints.toLocaleString()} lifetime points
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.viewLeaderboardBtn}
+            onPress={() => router.push('/community/leaderboard' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.viewLeaderboardText}>Leaderboard</Text>
+            <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* All-Time Progress Bar Toward Next Level */}
+        <View style={styles.levelProgressSection}>
+          <View style={styles.levelProgressHeader}>
+            <Text style={styles.levelProgressLabel}>
+              {levelInfo.nextLevel
+                ? `Next Tier: ${levelInfo.nextLevel}`
+                : 'Top Tier Unlocked 👑'}
+            </Text>
+            <Text style={styles.levelProgressRatio}>
+              {levelInfo.nextLevel
+                ? `${totalLifetimePoints} / ${levelInfo.nextPoints} pts`
+                : `${totalLifetimePoints} pts`}
+            </Text>
+          </View>
+
+          <View style={styles.levelProgressTrack}>
+            <View
+              style={[
+                styles.levelProgressFill,
+                {
+                  width: `${Math.max(4, levelInfo.progressPercent)}%`,
+                  backgroundColor: levelInfo.badgeColor,
+                },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.levelProgressFooter}>
+            {levelInfo.nextLevel
+              ? `${levelInfo.pointsToNext} points to reach ${levelInfo.nextLevel}`
+              : 'You are at the pinnacle of SweatFlix champions! 🔥'}
+          </Text>
+        </View>
+
+        {/* This Week's Points Highlight Banner */}
+        <TouchableOpacity
+          style={styles.weekPointsBanner}
+          onPress={() => router.push('/community/league' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.weekPointsLeft}>
+            <Ionicons name="trophy" size={20} color="#EAB308" />
+            <View>
+              <Text style={styles.weekPointsTitle}>
+                {profile?.league_tier || 'Bronze'} League Score
+              </Text>
+              <Text style={styles.weekPointsSub}>Mon - Sun UTC • Weekly reset</Text>
+            </View>
+          </View>
+          <View style={styles.weekPointsRight}>
+            <Text style={styles.weekPointsVal}>{weeklyPoints}</Text>
+            <Text style={styles.weekPointsLabel}>pts</Text>
+          </View>
+        </TouchableOpacity>
+      </Card>
+
+      {/* 2. My Workout Posts Grid (Step 9b: at the top above the stats) */}
+      <Card style={styles.postsSectionCard}>
+        <View style={styles.postsHeaderRow}>
+          <View style={styles.postsTitleRow}>
+            <Ionicons name="images-outline" size={18} color={Colors.primary} />
+            <Text style={styles.postsSectionTitle}>My Workout Posts</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/community/new-post' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.shareNewPostText}>+ Share</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loadingPosts ? (
+          <View style={styles.postsLoader}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+          </View>
+        ) : myPosts.length === 0 ? (
+          <View style={styles.postsEmptyState}>
+            <Ionicons name="camera-outline" size={32} color="#CBD5E1" />
+            <Text style={styles.postsEmptyTitle}>No workout posts yet</Text>
+            <Text style={styles.postsEmptySub}>
+              Share a photo of your workout to inspire friends and track progress!
+            </Text>
+            <TouchableOpacity
+              style={styles.postsShareBtn}
+              onPress={() => router.push('/community/new-post' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.postsShareBtnText}>Share First Post</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.postsGrid}>
+            {myPosts.map((post) => (
+              <TouchableOpacity
+                key={post.id}
+                style={styles.postThumbWrapper}
+                onPress={() => router.push(`/community/post-detail?id=${post.id}` as any)}
+                activeOpacity={0.8}
+              >
+                <Image
+                  source={{ uri: post.image_url }}
+                  style={styles.postThumbImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={150}
+                />
+                <View style={styles.thumbVisibilityBadge}>
+                  <Ionicons
+                    name={
+                      post.visibility === 'public'
+                        ? 'globe-outline'
+                        : post.visibility === 'friends'
+                        ? 'people-outline'
+                        : 'lock-closed-outline'
+                    }
+                    size={11}
+                    color="#FFFFFF"
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </Card>
 
       {/* 2. Stats Tiles (2x2 Grid + Streak Tile) */}
@@ -826,5 +1058,259 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: '#FFFFFF',
     fontSize: Typography.sizes.sm,
+  },
+  profileAvatarImg: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#E5E7EB',
+  },
+  userUsername: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  userBio: {
+    fontSize: 12,
+    color: Colors.textGrey,
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  countsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: Spacing.md,
+    marginTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  countItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  countValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textDark,
+  },
+  countLabel: {
+    fontSize: 12,
+    color: Colors.textGrey,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  countDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E5E7EB',
+  },
+  postsSectionCard: {
+    marginBottom: Spacing.lg,
+    padding: Spacing.md,
+  },
+  postsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  postsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  postsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  shareNewPostText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  postsLoader: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+  },
+  postsEmptyState: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+  postsEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.textDark,
+    marginTop: Spacing.xs,
+  },
+  postsEmptySub: {
+    fontSize: 12,
+    color: Colors.textGrey,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 4,
+    maxWidth: 240,
+  },
+  postsShareBtn: {
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+  },
+  postsShareBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  postsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  postThumbWrapper: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: BorderRadius.sm,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F3F4F6',
+  },
+  postThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbVisibilityBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 8,
+    padding: 3,
+  },
+  // Step 9d Level Tier Card
+  levelCard: {
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.card,
+  },
+  levelCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  levelBadgeWrap: {
+    gap: 4,
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  levelBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  levelPointsSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textGrey,
+    fontWeight: '500',
+  },
+  viewLeaderboardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#FFEAEA',
+    borderRadius: 8,
+  },
+  viewLeaderboardText: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  levelProgressSection: {
+    marginVertical: 4,
+  },
+  levelProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  levelProgressLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  levelProgressRatio: {
+    fontSize: 11,
+    color: Colors.textGrey,
+    fontWeight: '600',
+  },
+  levelProgressTrack: {
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  levelProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  levelProgressFooter: {
+    fontSize: 10,
+    color: Colors.textGrey,
+    marginTop: 6,
+  },
+  weekPointsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  weekPointsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  weekPointsTitle: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  weekPointsSub: {
+    fontSize: 10,
+    color: Colors.textGrey,
+  },
+  weekPointsRight: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  weekPointsVal: {
+    fontSize: Typography.sizes.md,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  weekPointsLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textGrey,
   },
 });

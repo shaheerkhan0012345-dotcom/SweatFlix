@@ -4,3 +4,6 @@ export * from './ScreenContainer';
 export * from './SectionTitle';
 export * from './TabIcon';
 export * from './OnboardingProgressBar';
+export * from './MealCard';
+export * from './RecipeModal';
+export * from './FloatingAiDietCoach';

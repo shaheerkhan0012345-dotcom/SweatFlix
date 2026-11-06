@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, BorderRadius } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useOnboarding } from '../context/OnboardingContext';
@@ -13,31 +13,55 @@ export default function SplashScreen() {
   const { state: onboardingState, isLoading: onboardingLoading } = useOnboarding();
 
   useEffect(() => {
-    if (isLoading || onboardingLoading) return;
+    let hasNavigated = false;
 
-    // 1. If Supabase is not configured yet, fallback to local onboarding check
-    if (!isSupabaseConfigured) {
-      if (onboardingState.isCompleted) {
+    const navigate = () => {
+      if (hasNavigated) return;
+      hasNavigated = true;
+
+      // 1. If Supabase is not configured yet, fallback to local onboarding check
+      if (!isSupabaseConfigured) {
+        if (onboardingState.isCompleted) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/login' as any);
+        }
+        return;
+      }
+
+      // 2. Not logged in -> go to login
+      if (!session || !user) {
+        router.replace('/login' as any);
+        return;
+      }
+
+      // 3. Logged in -> check username first (cannot be skipped)
+      if (!profile?.username) {
+        router.replace('/auth/choose-username' as any);
+        return;
+      }
+
+      // 4. Check onboarding completion
+      if (profile?.onboarding_completed) {
         router.replace('/(tabs)');
       } else {
-        router.replace('/login' as any);
+        router.replace('/onboarding/step1');
       }
-      return;
+    };
+
+    if (!isLoading && !onboardingLoading) {
+      // Small timeout to allow root navigator to mount properly
+      const timer = setTimeout(navigate, 100);
+      return () => clearTimeout(timer);
     }
 
-    // 2. Not logged in -> go to login
-    if (!session || !user) {
-      router.replace('/login' as any);
-      return;
-    }
+    // Safety timeout: If auth or profile check takes longer than 2.5s, proceed automatically
+    const safetyTimer = setTimeout(() => {
+      navigate();
+    }, 2500);
 
-    // 3. Logged in -> check onboarding completion
-    if (profile?.onboarding_completed) {
-      router.replace('/(tabs)');
-    } else {
-      router.replace('/onboarding/step1');
-    }
-  }, [isLoading, onboardingLoading, session, user, profile?.onboarding_completed, onboardingState.isCompleted]);
+    return () => clearTimeout(safetyTimer);
+  }, [isLoading, onboardingLoading, session, user, profile?.username, profile?.onboarding_completed, onboardingState.isCompleted, router]);
 
   return (
     <View style={styles.container}>

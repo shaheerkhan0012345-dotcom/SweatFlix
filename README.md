@@ -1,6 +1,11 @@
-# Welcome to your Expo app 👋
+# SweatFlix ⚡
+An advanced AI-powered fitness, athletic workout tracking, and multi-cuisine nutrition mobile application built with React Native and Expo SDK 58.
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+- **Live 3D Anatomical Workout Tracker**: Real-time visual tracking, muscle map engagement, and exercise walkthroughs.
+- **Dynamic 30-Day Diet Planner**: Halal-verified meal plans across 5 distinct cuisines (American, Indian, Pakistani, Chinese, British) with itemized grocery costs and macros.
+- **AI Diet Coach**: Intelligent, interactive nutritional assistant and meal replacement engine.
+- **Community & Social Leagues**: Weekly leaderboard, friend challenges, stories, and achievement badges.
 
 ## Get started
 

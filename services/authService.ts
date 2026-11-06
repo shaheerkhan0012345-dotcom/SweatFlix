@@ -187,9 +187,20 @@ export const authService = {
     if (!isSupabaseConfigured || !userId) return;
 
     try {
-      // Delete user's row from profiles table (cascade will remove related user rows)
+      // 1. Delete all user post images from private storage bucket
+      try {
+        const { data: userFiles } = await supabase.storage.from('posts').list(userId);
+        if (userFiles && userFiles.length > 0) {
+          const pathsToRemove = userFiles.map((f) => `${userId}/${f.name}`);
+          await supabase.storage.from('posts').remove(pathsToRemove);
+        }
+      } catch (storageErr: any) {
+        console.warn('Storage cleanup notice:', storageErr?.message);
+      }
+
+      // 2. Delete user's row from profiles table (cascade will remove posts, likes, reports, blocks)
       await supabase.from('profiles').delete().eq('id', userId);
-      // Sign out
+      // 3. Sign out
       await supabase.auth.signOut();
     } catch (e: any) {
       console.warn('Account deletion cleanup warning:', e?.message);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { Colors, Spacing, Typography, BorderRadius } from '../constants/theme';
+import { Colors, Spacing, Typography } from '../constants/theme';
 
 interface WeeklyActivityChartProps {
   completedDays: number[]; // 0 = Mon, ..., 6 = Sun

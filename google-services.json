@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "246938420488",
+    "project_id": "sweat-flix-95826",
+    "storage_bucket": "sweat-flix-95826.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:246938420488:android:82641d153bb9cd5951d8bd",
+        "android_client_info": {
+          "package_name": "com.sweatflix.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCW-qfFFLbYlafaT7boBXihrL_qwXADpRM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

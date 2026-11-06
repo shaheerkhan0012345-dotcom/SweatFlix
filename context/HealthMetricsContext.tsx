@@ -41,7 +41,16 @@ interface HealthMetricsContextValue {
   resetWater: () => Promise<void>;
   logMeal: (calories: number, protein?: number, carbs?: number, fat?: number) => Promise<void>;
   resetMeals: () => Promise<void>;
-  logWeight: (weightKg: number) => Promise<void>;
+  updateNutritionGoals: (
+    caloriesTarget: number,
+    proteinTarget: number,
+    carbsTarget: number,
+    fatTarget: number,
+    currentWeightKg?: number,
+    targetWeightKg?: number,
+    heightCm?: number
+  ) => Promise<void>;
+  logWeight: (newWeight: number) => Promise<void>;
   bmi: number;
   bmiCategory: string;
   isLoading: boolean;
@@ -49,29 +58,21 @@ interface HealthMetricsContextValue {
 
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
-const STORAGE_KEY_PREFIX = '@sweatflix_health_';
-const WEIGHT_HISTORY_KEY = '@sweatflix_weight_history';
-
 const defaultMetrics: HealthMetricsState = {
-  waterIntakeMl: 1250,
+  waterIntakeMl: 0,
   waterTargetMl: 2500,
-  caloriesConsumed: 1450,
+  caloriesConsumed: 0,
   caloriesTarget: 2200,
-  proteinGrams: 95,
+  proteinGrams: 0,
   proteinTarget: 140,
-  carbsGrams: 160,
+  carbsGrams: 0,
   carbsTarget: 230,
-  fatGrams: 42,
+  fatGrams: 0,
   fatTarget: 65,
   currentWeightKg: 72.5,
   targetWeightKg: 70.0,
   heightCm: 175,
-  weightHistory: [
-    { date: '2026-10-01', weight: 74.0 },
-    { date: '2026-10-03', weight: 73.4 },
-    { date: '2026-10-05', weight: 72.9 },
-    { date: '2026-10-07', weight: 72.5 },
-  ],
+  weightHistory: [],
 };
 
 const HealthMetricsContext = createContext<HealthMetricsContextValue | undefined>(undefined);
@@ -81,15 +82,18 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   const [metrics, setMetrics] = useState<HealthMetricsState>(defaultMetrics);
   const [isLoading, setIsLoading] = useState(true);
 
-  const todayKey = `${STORAGE_KEY_PREFIX}${getTodayDateString()}`;
+  const userPrefix = user?.id ? `@sweatflix_${user.id}_` : '@sweatflix_anon_';
+  const todayKey = `${userPrefix}health_${getTodayDateString()}`;
+  const weightHistoryKey = `${userPrefix}weight_history`;
 
   // Load metrics from storage and sync with user profile
   useEffect(() => {
+    let isCurrent = true;
     const loadData = async () => {
       try {
         const [dailyRaw, historyRaw] = await Promise.all([
           AsyncStorage.getItem(todayKey),
-          AsyncStorage.getItem(WEIGHT_HISTORY_KEY),
+          AsyncStorage.getItem(weightHistoryKey),
         ]);
 
         let loadedMetrics = { ...defaultMetrics };
@@ -126,16 +130,24 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
           loadedMetrics.heightCm = profile.height_cm;
         }
 
-        setMetrics(loadedMetrics);
+        if (isCurrent) {
+          setMetrics(loadedMetrics);
+        }
       } catch (e) {
         console.warn('Failed to load health metrics:', e);
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadData();
-  }, [profile, todayKey]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [profile, user?.id, todayKey, weightHistoryKey]);
 
   // Persist daily metrics
   const persistDaily = useCallback(async (updated: HealthMetricsState) => {
@@ -229,7 +241,7 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
           weightHistory: updatedHistory,
         };
 
-        AsyncStorage.setItem(WEIGHT_HISTORY_KEY, JSON.stringify(updatedHistory)).catch(console.warn);
+        AsyncStorage.setItem(weightHistoryKey, JSON.stringify(updatedHistory)).catch(console.warn);
 
         // Sync to Supabase if logged in
         if (user?.id && isSupabaseConfigured) {
@@ -245,7 +257,7 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
         return updated;
       });
     },
-    [user]
+    [user, weightHistoryKey]
   );
 
   // Calculate BMI
@@ -260,6 +272,34 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   else if (bmi < 30) bmiCategory = 'Overweight';
   else bmiCategory = 'Obese';
 
+  const updateNutritionGoals = useCallback(
+    async (
+      caloriesTarget: number,
+      proteinTarget: number,
+      carbsTarget: number,
+      fatTarget: number,
+      currentWeightKg?: number,
+      targetWeightKg?: number,
+      heightCm?: number
+    ) => {
+      setMetrics((prev) => {
+        const updated: HealthMetricsState = {
+          ...prev,
+          caloriesTarget,
+          proteinTarget,
+          carbsTarget,
+          fatTarget,
+          ...(currentWeightKg ? { currentWeightKg } : {}),
+          ...(targetWeightKg ? { targetWeightKg } : {}),
+          ...(heightCm ? { heightCm } : {}),
+        };
+        persistDaily(updated);
+        return updated;
+      });
+    },
+    [persistDaily]
+  );
+
   return (
     <HealthMetricsContext.Provider
       value={{
@@ -269,6 +309,7 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
         logMeal,
         resetMeals,
         logWeight,
+        updateNutritionGoals,
         bmi,
         bmiCategory,
         isLoading,

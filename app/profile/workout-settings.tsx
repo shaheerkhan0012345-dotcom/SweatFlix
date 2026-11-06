@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { Card } from '../../components/Card';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
-import { useSettings, RestTimerOption, UnitsOption } from '../../context/SettingsContext';
+import { useSettings, RestTimerOption } from '../../context/SettingsContext';
 
 const REST_OPTIONS: RestTimerOption[] = [15, 30, 45, 60];
 

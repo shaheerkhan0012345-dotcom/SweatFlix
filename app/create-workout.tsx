@@ -6,12 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Image,
   Modal,
   FlatList,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -26,6 +26,7 @@ import {
 } from '../context/CustomWorkoutsContext';
 import { FAKE_EXERCISES, ExerciseDetail } from '../data/fakeData';
 import { workoutService } from '../services/workoutService';
+import { getExerciseThumbnailAsset } from '../constants/exerciseImages';
 
 const BODY_PART_CHIPS = ['All', 'Chest', 'Back', 'Shoulders', 'Arms', 'Abs', 'Legs'] as const;
 
@@ -319,7 +320,12 @@ export default function CreateWorkoutScreen() {
               {selectedExercises.map((item, index) => (
                 <Card key={item.exerciseId} style={styles.exerciseRowCard}>
                   <View style={styles.exerciseRowTop}>
-                    <Image source={{ uri: item.thumbnail }} style={styles.rowThumbnail} />
+                    <Image
+                      source={getExerciseThumbnailAsset(item.exerciseId, item.thumbnail, item.bodyPart)}
+                      style={styles.rowThumbnail}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
                     <View style={styles.rowInfo}>
                       <Text style={styles.rowName} numberOfLines={1}>
                         {item.name}
@@ -510,7 +516,12 @@ export default function CreateWorkoutScreen() {
                     isSelected && styles.pickerItemSelected,
                   ]}
                 >
-                  <Image source={{ uri: item.thumbnail }} style={styles.pickerThumbnail} />
+                  <Image
+                    source={getExerciseThumbnailAsset(item.id, item.thumbnail, item.bodyPart)}
+                    style={styles.pickerThumbnail}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
                   <View style={styles.pickerItemInfo}>
                     <Text style={styles.pickerItemName}>{item.name}</Text>
                     <Text style={styles.pickerItemMeta}>

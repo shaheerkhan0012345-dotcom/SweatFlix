@@ -12,7 +12,6 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';

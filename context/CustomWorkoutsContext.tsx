@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePremium } from './PremiumContext';
 import { ExerciseDetail, FAKE_EXERCISES } from '../data/fakeData';
@@ -45,6 +45,39 @@ interface CustomWorkoutsContextValue {
 const STORAGE_KEY = '@sweatflix_custom_workouts';
 export const FREE_WORKOUT_LIMIT = 3;
 
+const calculateEstimates = (exercises: CustomWorkoutExercise[]) => {
+  const totalSets = exercises.reduce((acc, ex) => acc + ex.sets, 0);
+  const estimatedDuration = Math.max(totalSets * 2, 5);
+  const estimatedKcal = exercises.reduce((acc, ex) => acc + ex.sets * ex.kcalPerSet, 0);
+  return { estimatedDuration, estimatedKcal };
+};
+
+const mapDbToCustom = (db: DbWorkout): CustomWorkout => {
+  const exercises: CustomWorkoutExercise[] = (db.workout_exercises || []).map((we) => {
+    const match = FAKE_EXERCISES.find((e) => e.id === we.exercise_id);
+    const repsNum = parseInt(we.reps.replace(/[^0-9]/g, ''), 10) || 12;
+    return {
+      exerciseId: we.exercise_id,
+      name: match?.name || 'Exercise',
+      bodyPart: match?.bodyPart || 'Full Body',
+      thumbnail: match?.thumbnail || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&q=80',
+      sets: we.sets,
+      reps: repsNum,
+      kcalPerSet: match ? Math.round(match.kcal / 3) : 15,
+    };
+  });
+
+  const { estimatedDuration, estimatedKcal } = calculateEstimates(exercises);
+  return {
+    id: db.id,
+    name: db.name,
+    exercises,
+    estimatedDuration,
+    estimatedKcal,
+    createdAt: new Date(db.created_at).getTime(),
+  };
+};
+
 const CustomWorkoutsContext = createContext<CustomWorkoutsContextValue | undefined>(undefined);
 
 export const CustomWorkoutsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -52,40 +85,7 @@ export const CustomWorkoutsProvider: React.FC<{ children: React.ReactNode }> = (
   const [customWorkouts, setCustomWorkouts] = useState<CustomWorkout[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const calculateEstimates = (exercises: CustomWorkoutExercise[]) => {
-    const totalSets = exercises.reduce((acc, ex) => acc + ex.sets, 0);
-    const estimatedDuration = Math.max(totalSets * 2, 5);
-    const estimatedKcal = exercises.reduce((acc, ex) => acc + ex.sets * ex.kcalPerSet, 0);
-    return { estimatedDuration, estimatedKcal };
-  };
-
-  const mapDbToCustom = (db: DbWorkout): CustomWorkout => {
-    const exercises: CustomWorkoutExercise[] = (db.workout_exercises || []).map((we) => {
-      const match = FAKE_EXERCISES.find((e) => e.id === we.exercise_id);
-      const repsNum = parseInt(we.reps.replace(/[^0-9]/g, ''), 10) || 12;
-      return {
-        exerciseId: we.exercise_id,
-        name: match?.name || 'Exercise',
-        bodyPart: match?.bodyPart || 'Full Body',
-        thumbnail: match?.thumbnail || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&q=80',
-        sets: we.sets,
-        reps: repsNum,
-        kcalPerSet: match ? Math.round(match.kcal / 3) : 15,
-      };
-    });
-
-    const { estimatedDuration, estimatedKcal } = calculateEstimates(exercises);
-    return {
-      id: db.id,
-      name: db.name,
-      exercises,
-      estimatedDuration,
-      estimatedKcal,
-      createdAt: new Date(db.created_at).getTime(),
-    };
-  };
-
-  const refreshWorkouts = async () => {
+  const refreshWorkouts = useCallback(async () => {
     if (isSupabaseConfigured) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
@@ -111,19 +111,25 @@ export const CustomWorkoutsProvider: React.FC<{ children: React.ReactNode }> = (
     } catch (e) {
       console.error('Failed to load custom workouts:', e);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    let isCurrent = true;
     const init = async () => {
       try {
         await refreshWorkouts();
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
 
     init();
-  }, []);
+    return () => {
+      isCurrent = false;
+    };
+  }, [refreshWorkouts]);
 
   const saveWorkoutsToStorage = async (updated: CustomWorkout[]) => {
     setCustomWorkouts(updated);

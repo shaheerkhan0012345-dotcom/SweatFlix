@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { workoutService, DbSession } from '../services/workoutService';
+import { workoutService } from '../services/workoutService';
 
 export interface HomeProgressState {
   completedDays: number[]; // 0 = Mon, 1 = Tue, ..., 6 = Sun
@@ -145,7 +145,7 @@ export const HomeProgressProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const refreshProgress = async () => {
+  const refreshProgress = React.useCallback(async () => {
     if (isSupabaseConfigured) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user?.id) {
@@ -163,19 +163,25 @@ export const HomeProgressProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (err) {
       console.error('Failed to load local home progress:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    let isCurrent = true;
     const init = async () => {
       try {
         await refreshProgress();
       } finally {
-        setIsLoading(false);
+        if (isCurrent) {
+          setIsLoading(false);
+        }
       }
     };
 
     init();
-  }, []);
+    return () => {
+      isCurrent = false;
+    };
+  }, [refreshProgress]);
 
   const todayDateStr = getTodayDateString();
   const isTodayDone = progress.lastCompletedDate === todayDateStr;

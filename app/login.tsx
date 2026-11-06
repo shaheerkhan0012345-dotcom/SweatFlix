@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +30,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [resetSent, setResetSent] = useState<boolean>(false);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email.trim());
   const isPasswordValid = password.length >= 8;
@@ -98,7 +96,6 @@ export default function LoginScreen() {
     try {
       setIsLoading(true);
       await sendPasswordReset(email);
-      setResetSent(true);
       Alert.alert('Email Sent', `Password reset instructions have been sent to ${email.trim()}.`);
     } catch (e: any) {
       Alert.alert('Reset Failed', formatErrorMessage(e?.message || 'Unable to send reset email.'));
@@ -107,11 +104,19 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    Alert.alert(
-      'Google Sign-In',
-      'Google Sign-In will be enabled in an upcoming release. Please sign in or create an account with your Email and Password.'
-    );
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signInWithGoogle();
+      router.replace('/');
+    } catch (e: any) {
+      Alert.alert(
+        'Google Sign-In',
+        e?.message || 'Google Sign-In is not configured yet. Please sign in with email and password.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

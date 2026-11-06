@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { profileService } from '../services/profileService';
+import { pushNotificationService } from '../services/pushNotificationService';
 
 export type RestTimerOption = 15 | 30 | 45 | 60;
 export type UnitsOption = 'metric' | 'imperial';
@@ -102,6 +103,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (stored) {
           const parsed = JSON.parse(stored) as SettingsState;
           setSettings(parsed);
+          if (parsed.generalSettings) {
+            pushNotificationService.scheduleWorkoutReminder(
+              parsed.generalSettings.workoutReminders,
+              parsed.generalSettings.reminderTime
+            );
+          }
         }
         await refreshFromProfile();
       } catch (e) {
@@ -168,6 +175,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       },
     };
     await saveSettings(updated);
+
+    // Schedule or cancel real daily local workout reminder
+    if (partial.workoutReminders !== undefined || partial.reminderTime !== undefined) {
+      pushNotificationService.scheduleWorkoutReminder(
+        updated.generalSettings.workoutReminders,
+        updated.generalSettings.reminderTime
+      );
+    }
   };
 
   const setAdsRemoved = async (value: boolean) => {
@@ -188,7 +203,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const clearCache = async () => {
-    console.log('Cache cleared');
+    // Cache cleared
   };
 
   const resetAllData = async () => {

@@ -55,6 +55,7 @@ export interface DbSession {
   workout_id: string | null;
   workout_name: string;
   done_at: string;
+  started_at?: string | null;
   kcal: number;
 }
 
@@ -67,18 +68,26 @@ export interface DbWeeklyGoal {
 }
 
 // Convert DB exercise row to ExerciseDetail interface expected by UI
-export const mapDbExerciseToDetail = (db: DbExercise): ExerciseDetail => ({
-  id: db.id,
-  name: db.name,
-  bodyPart: db.body_part as any,
-  level: db.level as any,
-  reps: db.duration_or_reps,
-  kcal: db.kcal,
-  thumbnail: db.thumbnail_url,
-  videoUrl: db.video_url,
-  steps: db.steps || [],
-  isPremium: Boolean(db.is_premium),
-});
+export const mapDbExerciseToDetail = (db: DbExercise): ExerciseDetail => {
+  const localMatch = FAKE_EXERCISES.find((e) => e.id === db.id);
+  const isPushupThumb = db.thumbnail_url?.includes('1598971639058');
+  const isGoogleVideoUrl = !db.video_url || db.video_url.includes('commondatastorage.googleapis.com');
+
+  return {
+    id: db.id,
+    name: db.name,
+    bodyPart: db.body_part as any,
+    level: db.level as any,
+    reps: db.duration_or_reps,
+    kcal: db.kcal,
+    thumbnail: isPushupThumb && db.body_part !== 'Chest'
+      ? (localMatch?.thumbnail || db.thumbnail_url)
+      : db.thumbnail_url,
+    videoUrl: isGoogleVideoUrl ? (localMatch?.videoUrl || db.id) : db.video_url,
+    steps: db.steps || [],
+    isPremium: Boolean(db.is_premium),
+  };
+};
 
 export const mapDbChallengeToItem = (db: DbChallenge): ChallengeItem => ({
   id: db.id,
@@ -88,6 +97,159 @@ export const mapDbChallengeToItem = (db: DbChallenge): ChallengeItem => ({
   description: db.description || '',
   bannerColor: db.banner_color || '#FF8A1F',
 });
+
+export const EXERCISE_ID_ALIASES: Record<string, string> = {
+  // Workout exercises ex-1 to ex-25
+  'ex-1': 'abs-mountain-climbers',
+  'ex-2': 'legs-air-squats',
+  'ex-3': 'chest-pushups',
+  'ex-4': 'abs-wheel-rollout',
+  'ex-5': 'chest-diamond',
+  'ex-6': 'chest-pushups',
+  'ex-7': 'chest-diamond',
+  'ex-8': 'chest-pushups',
+  'ex-9': 'chest-decline-pushups',
+  'ex-10': 'chest-cable-cross',
+  'ex-11': 'abs-plank',
+  'ex-12': 'abs-bicycle-crunches',
+  'ex-13': 'abs-russian-twists',
+  'ex-14': 'abs-hanging-leg-raise',
+  'ex-15': 'abs-wheel-rollout',
+  'ex-16': 'legs-air-squats',
+  'ex-17': 'legs-walking-lunges',
+  'ex-18': 'legs-romanian-deadlift',
+  'ex-19': 'legs-calf-raises',
+  'ex-20': 'legs-wall-sit',
+  'ex-21': 'arms-tricep-dips',
+  'ex-22': 'shoulders-pike-pushups',
+  'ex-23': 'abs-plank',
+  'ex-24': 'arms-bicep-curls',
+  'ex-25': 'chest-decline-pushups',
+
+  // Common aliases
+  'shoulders-military-press': 'shoulders-overhead-press',
+  'shoulders-lateral-raises': 'shoulders-lateral-raise',
+  'shoulders-reverse-flyes': 'shoulders-rear-delt-fly',
+  'press': 'shoulders-overhead-press',
+  'overhead dumbbell press': 'shoulders-overhead-press',
+  'dumbbell seated bent arm lateral': 'shoulders-lateral-raise',
+  'lever seated reverse fly': 'shoulders-rear-delt-fly',
+
+  'legs-squat': 'legs-bulgarian-split',
+  'barbell high bar squat': 'legs-bulgarian-split',
+  'dumbbell romanian deadlift': 'legs-romanian-deadlift',
+  'bodyweight squats': 'legs-air-squats',
+  'air squats': 'legs-air-squats',
+  'walking lunges': 'legs-walking-lunges',
+  'glute bridges': 'legs-romanian-deadlift',
+  'calf raises': 'legs-calf-raises',
+  'wall sit': 'legs-wall-sit',
+  'wall sit hold': 'legs-wall-sit',
+
+  'abs-crunches': 'abs-bicycle-crunches',
+  'standard abdominal crunch': 'abs-bicycle-crunches',
+  'forearm core plank hold': 'abs-plank',
+  'plank hold': 'abs-plank',
+  'jumping jacks': 'abs-mountain-climbers',
+  'mountain climbers': 'abs-wheel-rollout',
+  'burpees': 'chest-diamond',
+  'push-ups': 'chest-pushups',
+  'standard push-ups': 'chest-pushups',
+  'diamond push-ups': 'chest-diamond',
+  'decline push-ups': 'chest-decline-pushups',
+  'wide push-ups': 'chest-pushups',
+  'isometric chest hold': 'chest-cable-cross',
+};
+
+export const resolveExerciseDetail = (
+  idOrName?: string | null,
+  preferredBodyPart?: string
+): ExerciseDetail => {
+  if (!idOrName) {
+    if (preferredBodyPart) {
+      const matchBp = FAKE_EXERCISES.find(
+        (e) => e.bodyPart.toLowerCase() === preferredBodyPart.toLowerCase()
+      );
+      if (matchBp) return matchBp;
+    }
+    return FAKE_EXERCISES[0];
+  }
+  const raw = String(idOrName).trim();
+  const direct = FAKE_EXERCISES.find((e) => e.id === raw);
+  if (direct) return direct;
+
+  const rawLower = raw.toLowerCase();
+  const clean = rawLower.replace(/[-_]/g, ' ').trim();
+  const mappedId = EXERCISE_ID_ALIASES[rawLower] || EXERCISE_ID_ALIASES[clean];
+  if (mappedId) {
+    const aliased = FAKE_EXERCISES.find((e) => e.id === mappedId);
+    if (aliased) return aliased;
+  }
+
+  const byName = FAKE_EXERCISES.find(
+    (e) =>
+      e.name.toLowerCase() === clean ||
+      e.name.toLowerCase().includes(clean) ||
+      clean.includes(e.name.toLowerCase()) ||
+      e.id.toLowerCase().replace(/[-_]/g, ' ').includes(clean)
+  );
+  if (byName) return byName;
+
+  // Category keyword fallback
+  if (
+    clean.includes('squat') ||
+    clean.includes('lunge') ||
+    clean.includes('leg') ||
+    clean.includes('calf') ||
+    clean.includes('wall sit')
+  ) {
+    return FAKE_EXERCISES.find((e) => e.id === 'legs-air-squats') || FAKE_EXERCISES[0];
+  }
+  if (
+    clean.includes('plank') ||
+    clean.includes('abs') ||
+    clean.includes('crunch') ||
+    clean.includes('twist') ||
+    clean.includes('core')
+  ) {
+    return FAKE_EXERCISES.find((e) => e.id === 'abs-plank') || FAKE_EXERCISES[0];
+  }
+  if (
+    clean.includes('shoulder') ||
+    clean.includes('press') ||
+    clean.includes('delt') ||
+    clean.includes('raise') ||
+    clean.includes('pike')
+  ) {
+    return FAKE_EXERCISES.find((e) => e.id === 'shoulders-overhead-press') || FAKE_EXERCISES[0];
+  }
+  if (
+    clean.includes('arm') ||
+    clean.includes('bicep') ||
+    clean.includes('tricep') ||
+    clean.includes('curl') ||
+    clean.includes('dip')
+  ) {
+    return FAKE_EXERCISES.find((e) => e.id === 'arms-bicep-curls') || FAKE_EXERCISES[0];
+  }
+  if (
+    clean.includes('back') ||
+    clean.includes('row') ||
+    clean.includes('lat') ||
+    clean.includes('pull')
+  ) {
+    return FAKE_EXERCISES.find((e) => e.id === 'back-pullups') || FAKE_EXERCISES[0];
+  }
+
+  if (preferredBodyPart) {
+    const matchBp = FAKE_EXERCISES.find(
+      (e) => e.bodyPart.toLowerCase() === preferredBodyPart.toLowerCase()
+    );
+    if (matchBp) return matchBp;
+  }
+
+  return FAKE_EXERCISES[0];
+};
 
 export const workoutService = {
   // 1. Exercises
@@ -123,7 +285,7 @@ export const workoutService = {
 
   async getExerciseById(id: string): Promise<ExerciseDetail | null> {
     if (!isSupabaseConfigured) {
-      return FAKE_EXERCISES.find((e) => e.id === id) || null;
+      return resolveExerciseDetail(id);
     }
 
     try {
@@ -134,12 +296,12 @@ export const workoutService = {
         .maybeSingle();
 
       if (error || !data) {
-        return FAKE_EXERCISES.find((e) => e.id === id) || null;
+        return resolveExerciseDetail(id);
       }
 
       return mapDbExerciseToDetail(data as DbExercise);
     } catch {
-      return FAKE_EXERCISES.find((e) => e.id === id) || null;
+      return resolveExerciseDetail(id);
     }
   },
 
@@ -316,18 +478,27 @@ export const workoutService = {
     userId: string,
     workoutName: string,
     kcal: number = 0,
-    workoutId: string | null = null
+    workoutId: string | null = null,
+    startedAt: string | null = null
   ): Promise<DbSession | null> {
     if (!isSupabaseConfigured || !userId) return null;
 
     try {
+      const isUuid =
+        Boolean(workoutId) &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          workoutId!
+        );
+      const validWorkoutId = isUuid ? workoutId : null;
+
       const { data, error } = await supabase
         .from('sessions')
         .insert({
           user_id: userId,
           workout_name: workoutName,
           kcal,
-          workout_id: workoutId,
+          workout_id: validWorkoutId,
+          started_at: startedAt,
           done_at: new Date().toISOString(),
         })
         .select()

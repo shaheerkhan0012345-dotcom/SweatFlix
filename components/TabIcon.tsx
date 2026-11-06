@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface TabIconProps {
-  name: 'home' | 'explore' | 'diet' | 'profile';
+  name: 'home' | 'explore' | 'community' | 'diet' | 'profile';
   color: any;
   focused: boolean;
   size?: number;
@@ -24,6 +23,9 @@ export const TabIcon: React.FC<TabIconProps> = ({
     case 'explore':
       iconName = focused ? 'fitness' : 'fitness-outline';
       break;
+    case 'community':
+      iconName = focused ? 'people' : 'people-outline';
+      break;
     case 'diet':
       iconName = focused ? 'restaurant' : 'restaurant-outline';
       break;
@@ -34,20 +36,5 @@ export const TabIcon: React.FC<TabIconProps> = ({
 
   return <Ionicons name={iconName} size={size} color={color} />;
 };
-
-const styles = StyleSheet.create({
-  fallback: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fallbackText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-});
 
 export default TabIcon;

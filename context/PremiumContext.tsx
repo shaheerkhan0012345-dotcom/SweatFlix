@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 
 interface PremiumContextValue {
   isPremium: boolean;
@@ -13,6 +14,7 @@ const STORAGE_KEY = '@sweatflix_is_premium';
 const PremiumContext = createContext<PremiumContextValue | undefined>(undefined);
 
 export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isPremium: authIsPremium } = useAuth();
   const [isPremium, setIsPremiumState] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -46,10 +48,12 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await setPremium(!isPremium);
   };
 
+  const effectiveIsPremium = isPremium || authIsPremium;
+
   return (
     <PremiumContext.Provider
       value={{
-        isPremium,
+        isPremium: effectiveIsPremium,
         setPremium,
         togglePremium,
         isLoading,

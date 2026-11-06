@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SweatFlix - Master Asset Generation Guide</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 12mm 14mm 12mm 14mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1E293B;
+      background: #FFFFFF;
+      font-size: 9.5pt;
+      line-height: 1.4;
+    }
+
+    .section-block {
+      page-break-inside: avoid;
+      margin-bottom: 14px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    /* Header banner */
+    .header-banner {
+      background: #0F172A;
+      color: #FFFFFF;
+      padding: 16px 20px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 6px solid #EF4444;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-title {
+      font-size: 18pt;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+    }
+    .header-subtitle {
+      font-size: 9.5pt;
+      color: #94A3B8;
+      margin-top: 2px;
+    }
+    .header-badge {
+      background: #EF4444;
+      color: #FFFFFF;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0F172A;
+      border-bottom: 2px solid #E2E8F0;
+      padding-bottom: 4px;
+      margin-top: 14px;
+      margin-bottom: 8px;
+      page-break-after: avoid;
+    }
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #EF4444;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      page-break-after: avoid;
+    }
+    p {
+      margin-bottom: 6px;
+      color: #334155;
+      font-size: 9pt;
+    }
+
+    /* Callouts */
+    .callout {
+      background: #F8FAFC;
+      border-left: 4px solid #3B82F6;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+    .callout-gold {
+      background: #FFFBEB;
+      border-left: 4px solid #F59E0B;
+    }
+    .callout-red {
+      background: #FEF2F2;
+      border-left: 4px solid #EF4444;
+    }
+
+    /* Reference Images Showcase */
+    .images-grid {
+      display: flex;
+      gap: 12px;
+      margin: 8px 0 12px 0;
+      page-break-inside: avoid;
+    }
+    .image-card {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+    .image-card img {
+      max-height: 200px;
+      max-width: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+      background: #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .image-caption {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #475569;
+      margin-top: 6px;
+    }
+
+    /* Code & Prompt block */
+    .prompt-box {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: "Consolas", monospace;
+      font-size: 8pt;
+      line-height: 1.35;
+      margin: 4px 0 10px 0;
+      border: 1px solid #1E293B;
+      page-break-inside: avoid;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6px 0 10px 0;
+      font-size: 8pt;
+      page-break-inside: auto;
+    }
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+    th {
+      background: #0F172A;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 5px 6px;
+      font-weight: 700;
+      font-size: 8pt;
+    }
+    td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #E2E8F0;
+      color: #334155;
+    }
+    tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+    .file-name {
+      font-family: "Consolas", monospace;
+      color: #DC2626;
+      font-weight: 700;
+      font-size: 7.5pt;
+    }
+    .pill {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-weight: 700;
+      background: #E2E8F0;
+      color: #475569;
+    }
+    .pill-red {
+      background: #FEE2E2;
+      color: #B91C1C;
+    }
+    .pill-green {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+    .pill-gold {
+      background: #FEF3C7;
+      color: #B45309;
+    }
+
+    /* Folder structure tree */
+    .folder-tree {
+      background: #0F172A;
+      color: #38BDF8;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: "Consolas", monospace;
+      font-size: 8pt;
+      line-height: 1.45;
+      margin: 8px 0;
+      page-break-inside: avoid;
+    }
+    .folder-comment {
+      color: #94A3B8;
+      font-style: italic;
+    }
+
+    .footer {
+      margin-top: 10px;
+      border-top: 1px solid #E2E8F0;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      color: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== SECTION 1: COVER & VISUAL STANDARDS ==================== -->
+  <div class="header-banner">
+    <div>
+      <div class="header-title">SWEATFLIX ATHLETICS</div>
+      <div class="header-subtitle">Official AI Asset Generation & Specification Guide</div>
+    </div>
+    <div class="header-badge">MASTER SPECIFICATION</div>
+  </div>
+
+  <div class="callout callout-gold">
+    <strong>Instructions for Asset Generation:</strong> Use this document to generate standalone, watermark-free images and loop videos for SweatFlix. All filenames match our React Native database schema for instant plug-and-play integration.
+  </div>
+
+  <h2>1. 3D Body & Anatomy Visual Standards</h2>
+  <p>All exercise movements and anatomical models follow a <strong>metallic chrome athletic CGI figure</strong> style with glowing active muscle indicators and isolated pure white backgrounds.</p>
+
+  <div class="images-grid">
+    <div class="image-card">
+      <img src="data:image/jpeg;base64,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" alt="3D Model Movement Reference" />
+      <div class="image-caption">Fig 1.1: Chrome Athletic Model (Barbell Military Press)</div>
+    </div>
+    <div class="image-card">
+      <img src="data:image/jpeg;base64,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" alt="Exercise + Active Muscle Rail" />
+      <div class="image-caption">Fig 1.2: Movement View + Active Muscle Highlight Rail</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 22%;">Attribute</th>
+        <th style="width: 48%;">Specification Standard</th>
+        <th style="width: 30%;">Avoid</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Body Material</strong></td>
+        <td>Chrome silver / metallic titanium muscular anatomy with deep striations</td>
+        <td>Fleshy skin tones, cartoonish plastic, skinless anatomy</td>
+      </tr>
+      <tr>
+        <td><strong>Apparel</strong></td>
+        <td>Solid black or dark charcoal athletic compression trunks / shorts</td>
+        <td>Baggy shirts, bright shoes, visible third-party logos</td>
+      </tr>
+      <tr>
+        <td><strong>Active Muscle Glow</strong></td>
+        <td>Glowing neon overlay on firing muscle group (Crimson Red or Cyan Blue)</td>
+        <td>Whole-body aura, messy gradients</td>
+      </tr>
+      <tr>
+        <td><strong>Background</strong></td>
+        <td>Pure solid white (<code>#FFFFFF</code>) or transparent PNG alpha channel</td>
+        <td>Gym walls, floor shadows, reflections</td>
+      </tr>
+      <tr>
+        <td><strong>Format & Ratio</strong></td>
+        <td>1080x1080 (1:1 Square) or 1080x1440 (3:4 Portrait), high resolution JPG/PNG</td>
+        <td>Watermarks, text, phone borders</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== SECTION 2: PROMPTS & ANATOMY ==================== -->
+  <div class="page-break"></div>
+
+  <h2>2. Ready-to-Copy AI Generation Prompts</h2>
+
+  <h3>A. Exercise Movement Prompt (Midjourney / DALL-E / Leonardo)</h3>
+  <div class="prompt-box">
+3D medical athletic CGI render of a muscular male bodybuilder performing [EXERCISE NAME, e.g. Barbell Standing Military Press], perfect biomechanical posture, chrome silver and metallic grey muscular anatomy, deep muscle definition and striations, black compression athletic shorts, active [TARGET MUSCLE, e.g. Anterior Deltoid and Triceps] highlighted in glowing crimson red, isolated on pure solid white background, high-end sports medicine visualization, 8k resolution, crisp studio lighting --no background, floor, shadows, gym, watermarks, text
+  </div>
+
+  <h3>B. Standing Neutral Anatomy (Anterior Front & Posterior Back)</h3>
+  <div class="prompt-box">
+Full body 3D anatomical CGI illustration of an athletic muscular man standing in neutral anatomical posture, [front view / back view], chrome silver metallic muscle tone, defined abdominal six-pack, vascularity, wearing black compression trunks, [chest / back] highlighted with soft glowing red overlay, isolated on pure white background, medical precision, clean render, 8k --no shadows, floor, clothes, text
+  </div>
+
+  <h2>3. Master Anatomy Models Manifest (8 Files)</h2>
+  <p>Place these files into: <code>assets/images/anatomy/</code></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 32%;">Target File Name</th>
+        <th style="width: 28%;">Anatomy View</th>
+        <th style="width: 40%;">Active Muscle Highlight Zone</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="file-name">body_anterior_full.jpg</td>
+        <td>Full Front Body View</td>
+        <td>Full anterior balance (Pectorals, Abdominals, Quadriceps)</td>
+      </tr>
+      <tr>
+        <td class="file-name">body_posterior_full.jpg</td>
+        <td>Full Rear Body View</td>
+        <td>Full posterior chain (Latissimus, Traps, Glutes, Hamstrings)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_chest.jpg</td>
+        <td>Chest Torso Close-up</td>
+        <td>Pectoralis Major & Clavicular Head (Red Glow)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_back.jpg</td>
+        <td>Upper Back Close-up</td>
+        <td>Latissimus Dorsi, Rhomboids & Mid-Traps (Red Glow)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_shoulders.jpg</td>
+        <td>Shoulders Close-up</td>
+        <td>Anterior, Lateral & Posterior Deltoids (Red Glow)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_arms.jpg</td>
+        <td>Biceps & Triceps Close-up</td>
+        <td>Biceps Brachii & Triceps Lateral Head (Red Glow)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_abs.jpg</td>
+        <td>Core Midsection Close-up</td>
+        <td>Rectus Abdominis & External Obliques (Red Glow)</td>
+      </tr>
+      <tr>
+        <td class="file-name">focus_legs.jpg</td>
+        <td>Lower Body Close-up</td>
+        <td>Quadriceps, Hamstrings & Calves (Red Glow)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-red">
+    <strong>Side Rail Thumbnails:</strong> Generate small square crops (200x200px) named <code>thumb_ant_delts.jpg</code>, <code>thumb_front_delts.jpg</code>, <code>thumb_shoulders_rail.jpg</code> for the vertical exercise screen rail.
+  </div>
+
+  <!-- ==================== SECTION 3: 36 EXERCISE VIDEOS ==================== -->
+  <div class="page-break"></div>
+
+  <h2>4. Workout Exercises & Video Library (36 Movements)</h2>
+  <p>Save these short 5-12s looping video clips (MP4, H.264, 720p/1080p, 16:9 or 9:16) in: <code>assets/videos/exercises/</code></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Muscle Group</th>
+        <th style="width: 30%;">Exercise Name</th>
+        <th style="width: 35%;">Target Video File Name</th>
+        <th style="width: 20%;">Key Cadence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Standard Push-Ups</td><td class="file-name">chest_standard_pushups.mp4</td><td>2s down, 1s press</td></tr>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Incline Dumbbell Press</td><td class="file-name">chest_incline_dumbbell_press.mp4</td><td>30 deg bench, press arc</td></tr>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Dumbbell Chest Flyes</td><td class="file-name">chest_dumbbell_flyes.mp4</td><td>Slight elbow bend, squeeze</td></tr>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Diamond Push-Ups</td><td class="file-name">chest_diamond_pushups.mp4</td><td>Hands touching, triceps</td></tr>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Cable Crossover</td><td class="file-name">chest_cable_crossover.mp4</td><td>High pulley to hip cross</td></tr>
+      <tr><td><span class="pill pill-red">CHEST</span></td><td>Decline Push-Ups</td><td class="file-name">chest_decline_pushups.mp4</td><td>Feet elevated on box</td></tr>
+
+      <tr><td><span class="pill">BACK</span></td><td>Overhand Pull-Ups</td><td class="file-name">back_pullups.mp4</td><td>Chin clears bar, full hang</td></tr>
+      <tr><td><span class="pill">BACK</span></td><td>Bent-Over Barbell Row</td><td class="file-name">back_barbell_bent_row.mp4</td><td>45 deg hinge, bar to ribs</td></tr>
+      <tr><td><span class="pill">BACK</span></td><td>Cable Lat Pulldown</td><td class="file-name">back_lat_pulldown.mp4</td><td>Wide grip, pull to collar</td></tr>
+      <tr><td><span class="pill">BACK</span></td><td>Single-Arm Dumbbell Row</td><td class="file-name">back_dumbbell_row.mp4</td><td>Knee on bench, elbow high</td></tr>
+      <tr><td><span class="pill">BACK</span></td><td>Conventional Deadlift</td><td class="file-name">back_barbell_deadlift.mp4</td><td>Hip hinge, shins to bar</td></tr>
+      <tr><td><span class="pill">BACK</span></td><td>Cable Face Pulls</td><td class="file-name">back_cable_face_pulls.mp4</td><td>Rope to eyes, external rot</td></tr>
+
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Standing Military Press</td><td class="file-name">shoulder_military_press.mp4</td><td>Overhead lockout, core brace</td></tr>
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Dumbbell Lateral Raise</td><td class="file-name">shoulder_lateral_raises.mp4</td><td>Elbows parallel to ground</td></tr>
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Arnold Dumbbell Press</td><td class="file-name">shoulder_arnold_press.mp4</td><td>180 deg wrist rotation</td></tr>
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Front Plate Raise</td><td class="file-name">shoulder_front_plate_raise.mp4</td><td>Weight plate to eye level</td></tr>
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Reverse Pec-Deck Fly</td><td class="file-name">shoulder_reverse_pec_deck.mp4</td><td>Rear delt squeeze</td></tr>
+      <tr><td><span class="pill pill-gold">SHOULDERS</span></td><td>Barbell Upright Row</td><td class="file-name">shoulder_upright_row.mp4</td><td>Wide grip, elbows high</td></tr>
+
+      <tr><td><span class="pill">ARMS</span></td><td>Barbell Biceps Curl</td><td class="file-name">arms_barbell_bicep_curl.mp4</td><td>Elbows pinned to ribs</td></tr>
+      <tr><td><span class="pill">ARMS</span></td><td>Cable Triceps Pushdown</td><td class="file-name">arms_triceps_rope_pushdown.mp4</td><td>Rope flare at bottom</td></tr>
+      <tr><td><span class="pill">ARMS</span></td><td>Dumbbell Hammer Curl</td><td class="file-name">arms_dumbbell_hammer_curl.mp4</td><td>Neutral grip, brachialis</td></tr>
+      <tr><td><span class="pill">ARMS</span></td><td>Overhead Triceps Extension</td><td class="file-name">arms_overhead_triceps_ext.mp4</td><td>Dumbbell behind head</td></tr>
+      <tr><td><span class="pill">ARMS</span></td><td>EZ-Bar Preacher Curl</td><td class="file-name">arms_preacher_curl.mp4</td><td>Preacher bench isolation</td></tr>
+      <tr><td><span class="pill">ARMS</span></td><td>Parallel Bar Dips</td><td class="file-name">arms_parallel_bar_dips.mp4</td><td>Lower to 90 deg, lockout</td></tr>
+
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Forearm Plank Hold</td><td class="file-name">abs_standard_plank.mp4</td><td>Rigid straight body line</td></tr>
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Hanging Leg Raise</td><td class="file-name">abs_hanging_leg_raise.mp4</td><td>Legs to 90 deg, no swing</td></tr>
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Bicycle Crunches</td><td class="file-name">abs_bicycle_crunches.mp4</td><td>Opposite knee to elbow</td></tr>
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Cable Woodchopper</td><td class="file-name">abs_cable_woodchopper.mp4</td><td>High to low rotational cut</td></tr>
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Ab Wheel Rollout</td><td class="file-name">abs_ab_wheel_rollout.mp4</td><td>From knees, roll to chest</td></tr>
+      <tr><td><span class="pill pill-green">ABS</span></td><td>Weighted Russian Twists</td><td class="file-name">abs_russian_twist.mp4</td><td>Torso twist with plate</td></tr>
+
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>Barbell Back Squats</td><td class="file-name">legs_barbell_squat.mp4</td><td>Crease below knee parallel</td></tr>
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>Romanian Deadlift</td><td class="file-name">legs_romanian_deadlift.mp4</td><td>Hip hinge, hamstring stretch</td></tr>
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>Bulgarian Split Squat</td><td class="file-name">legs_bulgarian_split_squat.mp4</td><td>Rear foot on bench</td></tr>
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>45-Degree Leg Press</td><td class="file-name">legs_leg_press_machine.mp4</td><td>Deep sled press, no knee snap</td></tr>
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>Walking Dumbbell Lunges</td><td class="file-name">legs_walking_lunges.mp4</td><td>Knee kisses floor lightly</td></tr>
+      <tr><td><span class="pill pill-red">LEGS</span></td><td>Standing Calf Raises</td><td class="file-name">legs_standing_calf_raise.mp4</td><td>Peak calf squeeze pause</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== SECTION 4: 30-DAY MONTHLY DIET ==================== -->
+  <div class="page-break"></div>
+
+  <h2>5. 30-Day Monthly Diet Image Manifest (30 Gourmet Meals)</h2>
+  <p>Place high-resolution food photography (16:9 or 4:3, well-lit, appetizing, plated cleanly) into: <code>assets/images/meals/</code></p>
+
+  <h3>A. Breakfasts (7 Rotating Morning Meals)</h3>
+  <table>
+    <thead><tr><th style="width: 32%;">Target File Name</th><th style="width: 30%;">Dish Name</th><th style="width: 15%;">Kcal</th><th style="width: 23%;">Presentation</th></tr></thead>
+    <tbody>
+      <tr><td class="file-name">breakfast_ham_eggs.jpg</td><td>Smoked Ham Slices & Soft Eggs</td><td>380 Kcal</td><td>Lean ham, 2 eggs, sourdough toast</td></tr>
+      <tr><td class="file-name">breakfast_banana_oats.jpg</td><td>Rolled Oats with Banana & Berries</td><td>340 Kcal</td><td>Oatmeal bowl, banana slices, blueberries</td></tr>
+      <tr><td class="file-name">breakfast_avocado_toast.jpg</td><td>Poached Egg Avocado Toast</td><td>310 Kcal</td><td>Sourdough, smashed avocado, 2 eggs</td></tr>
+      <tr><td class="file-name">breakfast_protein_pancakes.jpg</td><td>Oat Flour Protein Pancakes</td><td>420 Kcal</td><td>3 golden pancakes with maple drizzle</td></tr>
+      <tr><td class="file-name">breakfast_greek_parfait.jpg</td><td>Greek Yogurt Granola Parfait</td><td>290 Kcal</td><td>Yogurt jar with raw honey and walnuts</td></tr>
+      <tr><td class="file-name">breakfast_spinach_omelet.jpg</td><td>Spinach & Feta Egg White Omelet</td><td>260 Kcal</td><td>Folded omelet with wilted spinach</td></tr>
+      <tr><td class="file-name">breakfast_chia_pudding.jpg</td><td>Overnight Chia Berry Pudding</td><td>280 Kcal</td><td>Chia seed glass jar with raspberries</td></tr>
+    </tbody>
+  </table>
+
+  <h3>B. Morning Snacks (5 Mid-Morning Options)</h3>
+  <table>
+    <thead><tr><th style="width: 32%;">Target File Name</th><th style="width: 30%;">Dish Name</th><th style="width: 15%;">Kcal</th><th style="width: 23%;">Presentation</th></tr></thead>
+    <tbody>
+      <tr><td class="file-name">snack_apple_almond.jpg</td><td>Crisp Apple & Almond Butter</td><td>180 Kcal</td><td>Apple slices with almond butter dip</td></tr>
+      <tr><td class="file-name">snack_protein_bar.jpg</td><td>Homemade Dark Oat Protein Bar</td><td>220 Kcal</td><td>Square cut bar on parchment paper</td></tr>
+      <tr><td class="file-name">snack_cottage_berries.jpg</td><td>Cottage Cheese & Blackberries</td><td>160 Kcal</td><td>White porcelain bowl with berries</td></tr>
+      <tr><td class="file-name">snack_boiled_eggs.jpg</td><td>Hard-Boiled Eggs with Paprika</td><td>150 Kcal</td><td>Two halved eggs with golden yolk</td></tr>
+      <tr><td class="file-name">snack_mixed_nuts.jpg</td><td>Raw Athletic Trail Nut Mix</td><td>200 Kcal</td><td>Almonds, walnuts, pumpkin seeds</td></tr>
+    </tbody>
+  </table>
+
+  <h3>C. Lunches (8 High-Protein Entrees)</h3>
+  <table>
+    <thead><tr><th style="width: 32%;">Target File Name</th><th style="width: 30%;">Dish Name</th><th style="width: 15%;">Kcal</th><th style="width: 23%;">Presentation</th></tr></thead>
+    <tbody>
+      <tr><td class="file-name">lunch_spicy_chicken.jpg</td><td>Cajun Grilled Chicken & Rice</td><td>480 Kcal</td><td>Grilled sliced breast, jasmine rice & greens</td></tr>
+      <tr><td class="file-name">lunch_salmon_quinoa.jpg</td><td>Pan-Seared Atlantic Salmon</td><td>520 Kcal</td><td>Crisp salmon fillet, quinoa, asparagus</td></tr>
+      <tr><td class="file-name">lunch_beef_sweetpotato.jpg</td><td>Lean Sirloin & Sweet Potato</td><td>540 Kcal</td><td>Sirloin steak with roasted potato wedges</td></tr>
+      <tr><td class="file-name">lunch_turkey_wrap.jpg</td><td>Whole-Wheat Roast Turkey Wrap</td><td>410 Kcal</td><td>Rolled flatbread cut diagonally</td></tr>
+      <tr><td class="file-name">lunch_tuna_poke.jpg</td><td>Ahi Tuna Rice Poke Bowl</td><td>460 Kcal</td><td>Ahi tuna, edamame, cucumber, sesame</td></tr>
+      <tr><td class="file-name">lunch_chicken_fajita.jpg</td><td>Mexican Chicken Fajita Bowl</td><td>490 Kcal</td><td>Charred chicken strips, sautéed peppers</td></tr>
+      <tr><td class="file-name">lunch_tofu_stirfry.jpg</td><td>Crispy Sesame Tofu Bowl</td><td>430 Kcal</td><td>Golden tofu cubes with snap peas</td></tr>
+      <tr><td class="file-name">lunch_shrimp_pasta.jpg</td><td>Garlic Herb Jumbo Shrimp Pasta</td><td>470 Kcal</td><td>Sautéed prawns with whole-wheat ribbon pasta</td></tr>
+    </tbody>
+  </table>
+
+  <h3>D. Evening Snacks & E. Dinners (10 Combined Options)</h3>
+  <table>
+    <thead><tr><th style="width: 32%;">Target File Name</th><th style="width: 30%;">Dish Name</th><th style="width: 15%;">Slot / Kcal</th><th style="width: 23%;">Presentation</th></tr></thead>
+    <tbody>
+      <tr><td class="file-name">snack_peanut_banana.jpg</td><td>Banana & Natural Peanut Butter</td><td>Snack (240 Kcal)</td><td>Sliced banana with dollops of peanut butter</td></tr>
+      <tr><td class="file-name">snack_whey_smoothie.jpg</td><td>Dark Cocoa Whey Protein Shake</td><td>Snack (210 Kcal)</td><td>Tall glass with rich chocolate protein shake</td></tr>
+      <tr><td class="file-name">snack_rice_cakes.jpg</td><td>Salted Rice Cakes with Turkey</td><td>Snack (140 Kcal)</td><td>Two rice cakes topped with lean turkey</td></tr>
+      <tr><td class="file-name">snack_dark_chocolate.jpg</td><td>85% Dark Chocolate & Walnuts</td><td>Snack (190 Kcal)</td><td>Two squares dark chocolate, walnut halves</td></tr>
+      <tr><td class="file-name">dinner_salad_bowl.jpg</td><td>Mediterranean Tuna Salad Bowl</td><td>Dinner (350 Kcal)</td><td>Flaked tuna, Kalamata olives, cucumbers</td></tr>
+      <tr><td class="file-name">dinner_cod_greens.jpg</td><td>Baked Cod Fillet & Green Beans</td><td>Dinner (320 Kcal)</td><td>White cod baked with lemon butter</td></tr>
+      <tr><td class="file-name">dinner_turkey_meatballs.jpg</td><td>Lean Turkey Meatballs & Zucchini</td><td>Dinner (390 Kcal)</td><td>Turkey meatballs over spiralized zucchini</td></tr>
+      <tr><td class="file-name">dinner_flank_steak.jpg</td><td>Grilled Flank Steak & Asparagus</td><td>Dinner (440 Kcal)</td><td>Sliced flank steak with grilled asparagus</td></tr>
+      <tr><td class="file-name">dinner_salmon_bowl.jpg</td><td>Teriyaki Wild Salmon & Cauliflower</td><td>Dinner (460 Kcal)</td><td>Glazed salmon fillet with cauliflower purée</td></tr>
+      <tr><td class="file-name">dinner_chicken_soup.jpg</td><td>Hearty Shredded Chicken Broth</td><td>Dinner (280 Kcal)</td><td>Clear chicken broth with carrots & celery</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== SECTION 5: CHALLENGES & DIRECTORY ==================== -->
+  <div class="page-break"></div>
+
+  <h2>6. Challenge Covers & Home Hero Banners (4 Images)</h2>
+  <p>Save these 1920x1080 (16:9) cinematic horizontal images in: <code>assets/images/challenges/</code></p>
+
+  <table>
+    <thead><tr><th style="width: 35%;">Target Filename</th><th style="width: 25%;">Challenge Name</th><th style="width: 40%;">Cinematic Concept</th></tr></thead>
+    <tbody>
+      <tr><td class="file-name">challenge_fatburn_cover.jpg</td><td>30-Day Fat Burn Generator</td><td>Athletes with arms crossed / battle ropes, energetic blue studio</td></tr>
+      <tr><td class="file-name">challenge_hypertrophy_cover.jpg</td><td>Upper Body Hypertrophy</td><td>Muscular athlete lifting heavy barbell, dramatic purple/dark gym</td></tr>
+      <tr><td class="file-name">challenge_cardio_cover.jpg</td><td>Morning Cardio Blitz</td><td>Sprinting runner under dark stadium floodlights, dynamic mist</td></tr>
+      <tr><td class="file-name">hero_workout_card.jpg</td><td>Today's Workout Home Hero</td><td>Physique bodybuilder holding barbell, clean premium lighting</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Project Directory Structure</h2>
+  <p>Place your generated files directly into these exact folders in your project directory:</p>
+
+  <div class="folder-tree">
+fitness app/
+└── assets/
+    ├── images/
+    │   ├── anatomy/       <span class="folder-comment">← 8 3D Anatomy files (body_anterior_full.jpg, focus_chest.jpg, etc.)</span>
+    │   ├── meals/         <span class="folder-comment">← 30 Gourmet meal images (breakfast_ham_eggs.jpg, etc.)</span>
+    │   └── challenges/    <span class="folder-comment">← 4 Cinematic covers (challenge_fatburn_cover.jpg, etc.)</span>
+    └── videos/
+        └── exercises/     <span class="folder-comment">← 36 Exercise loop videos (chest_standard_pushups.mp4, etc.)</span>
+  </div>
+
+  <div class="callout callout-gold">
+    <strong>Delivery Tip:</strong> You can send or paste files in batches (for instance, the 30 Diet images first, or the 3D Anatomy images first). Once placed in the folders above, the app picks them up automatically.
+  </div>
+
+  <div class="footer">
+    <span>SweatFlix Master Asset Specification Guide</span>
+    <span>Generated for Shaheer</span>
+  </div>
+
+</body>
+</html>

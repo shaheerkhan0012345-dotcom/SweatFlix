@@ -2,12 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { authService } from '../services/authService';
-import { profileService, UserProfile, defaultProfile } from '../services/profileService';
+import { profileService, UserProfile, defaultProfile, isUserPremium } from '../services/profileService';
+import { pushNotificationService } from '../services/pushNotificationService';
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   profile: UserProfile | null;
+  isPremium: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<any>;
@@ -60,12 +62,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const { data } = await supabase.auth.getSession();
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 3000)
+        );
+
+        const { data } = await Promise.race([sessionPromise, timeoutPromise]);
         if (mounted) {
           setSession(data.session);
           setUser(data.session?.user ?? null);
           if (data.session?.user) {
-            await fetchProfileForUser(data.session.user.id, data.session.user.email);
+            await Promise.race([
+              fetchProfileForUser(data.session.user.id, data.session.user.email),
+              new Promise((resolve) => setTimeout(resolve, 2000)),
+            ]).catch(() => {});
           }
         }
       } catch (e) {
@@ -132,6 +142,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    try {
+      await pushNotificationService.unregisterToken();
+    } catch (e) {
+      console.warn('Failed to unregister push token on sign out:', e);
+    }
     await authService.signOut();
     setSession(null);
     setUser(null);
@@ -165,6 +180,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteAccount = async () => {
     if (!user?.id) return;
+    try {
+      await pushNotificationService.unregisterToken();
+    } catch (e) {
+      console.warn('Failed to unregister push token on delete account:', e);
+    }
     await authService.deleteAccount(user.id);
     setSession(null);
     setUser(null);
@@ -177,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         profile,
+        isPremium: isUserPremium(profile),
         isLoading,
         signIn,
         signUp,

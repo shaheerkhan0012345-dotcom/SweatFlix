@@ -1,6 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { TabIcon } from '../../components/TabIcon';
 import { usePremium } from '../../context/PremiumContext';
@@ -33,22 +34,36 @@ function ExploreHeaderButton() {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  // Generous bottom inset ensures tab buttons sit cleanly above mobile navigation bar
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 20);
+  const tabHeight = 62 + bottomInset;
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.tabActive,
         tabBarInactiveTintColor: Colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: '#FFFFFF',
           borderTopColor: Colors.cardBorder,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: tabHeight,
+          paddingBottom: bottomInset,
           paddingTop: 8,
+          elevation: 12,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 11,
+          fontWeight: '700',
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
         headerStyle: {
           backgroundColor: Colors.background,
@@ -74,6 +89,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="home" color={color} focused={focused} />
           ),
+          headerRight: () => <ExploreHeaderButton />,
         }}
       />
       <Tabs.Screen
@@ -86,6 +102,17 @@ export default function TabsLayout() {
             <TabIcon name="explore" color={color} focused={focused} />
           ),
           headerRight: () => <ExploreHeaderButton />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          headerTitle: 'Community',
+          tabBarLabel: 'Community',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="community" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen

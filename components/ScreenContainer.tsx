@@ -4,6 +4,7 @@ import {
   View,
   ScrollView,
   ViewStyle,
+  StyleProp,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView, Edge } from 'react-native-safe-area-context';
@@ -12,8 +13,8 @@ import { Colors, Spacing } from '../constants/theme';
 export interface ScreenContainerProps {
   children: React.ReactNode;
   scrollable?: boolean;
-  style?: ViewStyle;
-  contentContainerStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  contentContainerStyle?: StyleProp<ViewStyle>;
   edges?: Edge[];
 }
 
@@ -26,7 +27,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 }) => {
   return (
     <SafeAreaView edges={edges} style={[styles.container, style]}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+      <StatusBar barStyle="dark-content" />
       {scrollable ? (
         <ScrollView
           style={styles.scrollView}

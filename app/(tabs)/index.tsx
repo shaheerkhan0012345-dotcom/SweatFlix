@@ -17,6 +17,8 @@ import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { HomeTodayWorkoutCard } from '../../components/home/HomeTodayWorkoutCard';
+import { HomeAnalyticsHub } from '../../components/home/HomeAnalyticsHub';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -741,6 +743,9 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Live Analytics Hub (Water Intake, Workout Consistency, Weight Journey & Macros) */}
+        <HomeAnalyticsHub />
+
         {/* 4. Daily Fitness Report Calendar (Dynamic Real-Time) */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Daily Fitness Report</Text>
@@ -962,87 +967,8 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* 5. Today Workout Card (Video Frames 015, 020, 025) */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Today Workout</Text>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.todayWorkoutCard,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-          onPress={handleStartWorkout}
-          activeOpacity={0.92}
-        >
-          <View style={styles.todayWorkoutContent}>
-            {/* Top row: Label + 0/8 Pill */}
-            <View style={styles.todayWorkoutHeaderRow}>
-              <Text style={styles.todayWorkoutTag}>TODAY&apos;S WORKOUT</Text>
-              <View
-                style={[
-                  styles.progressCounterPill,
-                  { backgroundColor: isDarkMode ? '#1E293B' : '#FFFFFF', borderColor: colors.border },
-                ]}
-              >
-                <Text style={[styles.progressCounterText, { color: colors.text }]}>0 / 8</Text>
-              </View>
-            </View>
-
-            {/* Title */}
-            <Text style={[styles.todayWorkoutTitle, { color: colors.text }]}>
-              Shoulder, Abdomen &amp; Legs
-            </Text>
-
-            {/* Level Badge */}
-            <View style={styles.advancedBadge}>
-              <Ionicons name="bar-chart" size={13} color="#6366F1" />
-              <Text style={styles.advancedBadgeText}>Advanced</Text>
-            </View>
-
-            {/* Subtitle */}
-            <Text style={[styles.todayWorkoutSub, { color: colors.textSecondary }]}>
-              Target your Shoulder, Abdomen &amp; Legs with this powerful routine.
-            </Text>
-
-            {/* Metrics Row */}
-            <View style={styles.workoutMetricsRow}>
-              <View style={styles.workoutMetricItem}>
-                <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                <Text style={[styles.workoutMetricText, { color: colors.textSecondary }]}>40 Min</Text>
-              </View>
-              <View style={styles.workoutMetricItem}>
-                <Ionicons name="barbell-outline" size={14} color={colors.textSecondary} />
-                <Text style={[styles.workoutMetricText, { color: colors.textSecondary }]}>8 Exercises</Text>
-              </View>
-              <View style={styles.workoutMetricItem}>
-                <Ionicons name="flame-outline" size={14} color={Colors.primary} />
-                <Text style={styles.workoutMetricText}>103 kcal</Text>
-              </View>
-            </View>
-
-            {/* Start Workout Button */}
-            <TouchableOpacity
-              style={styles.startWorkoutPillBtn}
-              onPress={handleStartWorkout}
-              activeOpacity={0.88}
-            >
-              <Ionicons name="play" size={15} color="#FFFFFF" />
-              <Text style={styles.startWorkoutPillText}>Start Workout</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Right 3D Character Illustration */}
-          <View style={styles.todayWorkoutIllustrationBox}>
-            <Image
-              source={ANATOMY_3D_ASSETS.shoulder}
-              style={styles.todayWorkoutIllustration}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-              priority="high"
-            />
-          </View>
-        </TouchableOpacity>
+        {/* 5. Today's Workout Card with Live Video Cutout for Respective Day */}
+        <HomeTodayWorkoutCard />
 
 
         {/* 7. Today Activity Carousel (Video Frames 030, 035) */}

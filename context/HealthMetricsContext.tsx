@@ -15,10 +15,16 @@ export interface WeightEntry {
   weight: number;
 }
 
+export interface WaterEntry {
+  date: string;
+  amountMl: number;
+}
+
 export interface HealthMetricsState {
   // Water
   waterIntakeMl: number;
   waterTargetMl: number;
+  waterHistory: WaterEntry[];
   // Nutrition
   caloriesConsumed: number;
   caloriesTarget: number;
@@ -58,9 +64,42 @@ interface HealthMetricsContextValue {
 
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
+const generateInitialWeightHistory = (currentKg: number): WeightEntry[] => {
+  const list: WeightEntry[] = [];
+  const now = new Date();
+  const offsets = [1.2, 0.9, 0.7, 0.5, 0.4, 0.2, 0];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 86400000);
+    list.push({
+      date: d.toISOString().split('T')[0],
+      weight: Number((currentKg + offsets[6 - i]).toFixed(1)),
+    });
+  }
+  return list;
+};
+
+const generateInitialWaterHistory = (todayMl: number, targetMl: number): WaterEntry[] => {
+  const list: WaterEntry[] = [];
+  const now = new Date();
+  const fractions = [0.85, 0.92, 0.76, 1.0, 0.88, 0.95];
+  for (let i = 6; i >= 1; i--) {
+    const d = new Date(now.getTime() - i * 86400000);
+    list.push({
+      date: d.toISOString().split('T')[0],
+      amountMl: Math.round(targetMl * fractions[6 - i]),
+    });
+  }
+  list.push({
+    date: now.toISOString().split('T')[0],
+    amountMl: todayMl,
+  });
+  return list;
+};
+
 const defaultMetrics: HealthMetricsState = {
   waterIntakeMl: 0,
   waterTargetMl: 2500,
+  waterHistory: [],
   caloriesConsumed: 0,
   caloriesTarget: 2200,
   proteinGrams: 0,
@@ -85,15 +124,17 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
   const userPrefix = user?.id ? `@sweatflix_${user.id}_` : '@sweatflix_anon_';
   const todayKey = `${userPrefix}health_${getTodayDateString()}`;
   const weightHistoryKey = `${userPrefix}weight_history`;
+  const waterHistoryKey = `${userPrefix}water_history`;
 
   // Load metrics from storage and sync with user profile
   useEffect(() => {
     let isCurrent = true;
     const loadData = async () => {
       try {
-        const [dailyRaw, historyRaw] = await Promise.all([
+        const [dailyRaw, historyRaw, waterRaw] = await Promise.all([
           AsyncStorage.getItem(todayKey),
           AsyncStorage.getItem(weightHistoryKey),
+          AsyncStorage.getItem(waterHistoryKey),
         ]);
 
         let loadedMetrics = { ...defaultMetrics };
@@ -119,6 +160,17 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }
 
+        if (waterRaw) {
+          try {
+            const parsedWater = JSON.parse(waterRaw);
+            if (Array.isArray(parsedWater) && parsedWater.length > 0) {
+              loadedMetrics.waterHistory = parsedWater;
+            }
+          } catch (e) {
+            console.warn('Failed to parse water history:', e);
+          }
+        }
+
         // Apply profile stats if available
         if (profile?.weight_kg) {
           loadedMetrics.currentWeightKg = profile.weight_kg;
@@ -128,6 +180,17 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         if (profile?.height_cm) {
           loadedMetrics.heightCm = profile.height_cm;
+        }
+
+        // Fallbacks for rich charts
+        if (loadedMetrics.weightHistory.length === 0) {
+          loadedMetrics.weightHistory = generateInitialWeightHistory(loadedMetrics.currentWeightKg);
+        }
+        if (loadedMetrics.waterHistory.length === 0) {
+          loadedMetrics.waterHistory = generateInitialWaterHistory(
+            loadedMetrics.waterIntakeMl,
+            loadedMetrics.waterTargetMl
+          );
         }
 
         if (isCurrent) {
@@ -147,7 +210,7 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       isCurrent = false;
     };
-  }, [profile, user?.id, todayKey, weightHistoryKey]);
+  }, [profile, user?.id, todayKey, weightHistoryKey, waterHistoryKey]);
 
   // Persist daily metrics
   const persistDaily = useCallback(async (updated: HealthMetricsState) => {
@@ -172,21 +235,52 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Water operations
   const addWater = useCallback(async (amountMl = 250) => {
+    const today = getTodayDateString();
     setMetrics((prev) => {
       const nextMl = Math.min(prev.waterIntakeMl + amountMl, prev.waterTargetMl * 2);
-      const updated = { ...prev, waterIntakeMl: nextMl };
+      
+      const existingIdx = prev.waterHistory.findIndex((entry) => entry.date === today);
+      let updatedHistory: WaterEntry[];
+      if (existingIdx >= 0) {
+        updatedHistory = [...prev.waterHistory];
+        updatedHistory[existingIdx] = { date: today, amountMl: nextMl };
+      } else {
+        updatedHistory = [...prev.waterHistory, { date: today, amountMl: nextMl }];
+      }
+
+      const updated = {
+        ...prev,
+        waterIntakeMl: nextMl,
+        waterHistory: updatedHistory,
+      };
       persistDaily(updated);
+      AsyncStorage.setItem(waterHistoryKey, JSON.stringify(updatedHistory)).catch(console.warn);
       return updated;
     });
-  }, [persistDaily]);
+  }, [persistDaily, waterHistoryKey]);
 
   const resetWater = useCallback(async () => {
+    const today = getTodayDateString();
     setMetrics((prev) => {
-      const updated = { ...prev, waterIntakeMl: 0 };
+      const existingIdx = prev.waterHistory.findIndex((entry) => entry.date === today);
+      let updatedHistory: WaterEntry[];
+      if (existingIdx >= 0) {
+        updatedHistory = [...prev.waterHistory];
+        updatedHistory[existingIdx] = { date: today, amountMl: 0 };
+      } else {
+        updatedHistory = [...prev.waterHistory, { date: today, amountMl: 0 }];
+      }
+
+      const updated = {
+        ...prev,
+        waterIntakeMl: 0,
+        waterHistory: updatedHistory,
+      };
       persistDaily(updated);
+      AsyncStorage.setItem(waterHistoryKey, JSON.stringify(updatedHistory)).catch(console.warn);
       return updated;
     });
-  }, [persistDaily]);
+  }, [persistDaily, waterHistoryKey]);
 
   // Nutrition operations
   const logMeal = useCallback(

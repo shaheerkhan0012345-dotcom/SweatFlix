@@ -18,7 +18,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { HomeTodayWorkoutCard } from '../../components/home/HomeTodayWorkoutCard';
-import { HomeAnalyticsHub } from '../../components/home/HomeAnalyticsHub';
+import { HomeWorkoutChart } from '../../components/home/HomeWorkoutChart';
+import { HomeWeightChart } from '../../components/home/HomeWeightChart';
+import { ProMembershipCard } from '../../components/ProMembershipCard';
+import { getVerifiedMealImage, resolveSafeImageSource } from '../../constants/mealImages';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
@@ -743,9 +746,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Live Analytics Hub (Water Intake, Workout Consistency, Weight Journey & Macros) */}
-        <HomeAnalyticsHub />
-
         {/* 4. Daily Fitness Report Calendar (Dynamic Real-Time) */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Daily Fitness Report</Text>
@@ -969,6 +969,9 @@ export default function HomeScreen() {
 
         {/* 5. Today's Workout Card with Live Video Cutout for Respective Day */}
         <HomeTodayWorkoutCard />
+
+        {/* 6. SweatFlix PRO Membership VIP Card */}
+        <ProMembershipCard />
 
 
         {/* 7. Today Activity Carousel (Video Frames 030, 035) */}
@@ -1254,7 +1257,7 @@ export default function HomeScreen() {
                         ? '\n\nInstructions:\n• ' + meal.instructions.join('\n• ')
                         : '') +
                       (meal.budgetTips ? '\n\n💡 Tip: ' + meal.budgetTips : ''),
-                    image: meal.image,
+                    image: resolveSafeImageSource(getVerifiedMealImage(meal.title, meal.type, todayCuisine) || meal.image),
                     priceLabel: `$${(meal.costUsd || getAsianMealCostUsd(meal)).toFixed(2)}`,
                     time: meal.prepTime || '10 Mins',
                     tier: meal.mealSlot,
@@ -1269,7 +1272,7 @@ export default function HomeScreen() {
               >
                 <View style={styles.instantMealImgWrap}>
                   <Image
-                    source={meal.image}
+                    source={resolveSafeImageSource(getVerifiedMealImage(meal.title, meal.type, todayCuisine) || meal.image)}
                     style={styles.instantMealImg}
                     contentFit="cover"
                     cachePolicy="memory-disk"
@@ -1354,7 +1357,7 @@ export default function HomeScreen() {
                             ? '\n\nInstructions:\n• ' + meal.instructions.join('\n• ')
                             : '') +
                           (meal.budgetTips ? '\n\n💡 Tip: ' + meal.budgetTips : ''),
-                        image: meal.image,
+                        image: resolveSafeImageSource(getVerifiedMealImage(meal.title, meal.type, todayCuisine) || meal.image),
                         priceLabel: `$${(meal.costUsd || getAsianMealCostUsd(meal)).toFixed(2)}`,
                         time: meal.prepTime || '10 Mins',
                         tier: meal.mealSlot,
@@ -1517,6 +1520,12 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* 11. Daily Workout Consistency Chart */}
+        <HomeWorkoutChart />
+
+        {/* 12. Daily Weight Report Chart */}
+        <HomeWeightChart />
 
         {/* Extra Bottom Padding */}
         <View style={{ height: 40 }} />

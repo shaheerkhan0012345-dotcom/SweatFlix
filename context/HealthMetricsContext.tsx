@@ -64,38 +64,6 @@ interface HealthMetricsContextValue {
 
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
-const generateInitialWeightHistory = (currentKg: number): WeightEntry[] => {
-  const list: WeightEntry[] = [];
-  const now = new Date();
-  const offsets = [1.2, 0.9, 0.7, 0.5, 0.4, 0.2, 0];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 86400000);
-    list.push({
-      date: d.toISOString().split('T')[0],
-      weight: Number((currentKg + offsets[6 - i]).toFixed(1)),
-    });
-  }
-  return list;
-};
-
-const generateInitialWaterHistory = (todayMl: number, targetMl: number): WaterEntry[] => {
-  const list: WaterEntry[] = [];
-  const now = new Date();
-  const fractions = [0.85, 0.92, 0.76, 1.0, 0.88, 0.95];
-  for (let i = 6; i >= 1; i--) {
-    const d = new Date(now.getTime() - i * 86400000);
-    list.push({
-      date: d.toISOString().split('T')[0],
-      amountMl: Math.round(targetMl * fractions[6 - i]),
-    });
-  }
-  list.push({
-    date: now.toISOString().split('T')[0],
-    amountMl: todayMl,
-  });
-  return list;
-};
-
 const defaultMetrics: HealthMetricsState = {
   waterIntakeMl: 0,
   waterTargetMl: 2500,
@@ -182,15 +150,16 @@ export const HealthMetricsProvider: React.FC<{ children: React.ReactNode }> = ({
           loadedMetrics.heightCm = profile.height_cm;
         }
 
-        // Fallbacks for rich charts
+        // Initialize real history based on current user stage (starts at 0 if no water logged)
         if (loadedMetrics.weightHistory.length === 0) {
-          loadedMetrics.weightHistory = generateInitialWeightHistory(loadedMetrics.currentWeightKg);
+          loadedMetrics.weightHistory = [
+            { date: getTodayDateString(), weight: loadedMetrics.currentWeightKg },
+          ];
         }
         if (loadedMetrics.waterHistory.length === 0) {
-          loadedMetrics.waterHistory = generateInitialWaterHistory(
-            loadedMetrics.waterIntakeMl,
-            loadedMetrics.waterTargetMl
-          );
+          loadedMetrics.waterHistory = [
+            { date: getTodayDateString(), amountMl: loadedMetrics.waterIntakeMl || 0 },
+          ];
         }
 
         if (isCurrent) {

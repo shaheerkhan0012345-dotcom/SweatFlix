@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography } from '../constants/theme';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { Colors } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,7 +24,29 @@ export function ProMembershipCard({ onPress, style }: ProMembershipCardProps) {
   const { profile } = useAuth();
   const { settings } = useSettings();
   const { isDarkMode, colors } = useTheme();
-  const athleteName = profile?.name || settings?.name || 'Shaheer';
+  const athleteName = profile?.name || settings?.name || 'Athlete';
+
+  // Breathing pulse animation for card border & button glow
+  const pulseAnim = useSharedValue(1);
+  const glowOpacity = useSharedValue(0.4);
+
+  useEffect(() => {
+    pulseAnim.value = withRepeat(
+      withTiming(1.02, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+    glowOpacity.value = withRepeat(
+      withTiming(0.9, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, [pulseAnim, glowOpacity]);
+
+  const animatedGlowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+    transform: [{ scale: pulseAnim.value }],
+  }));
 
   const handlePress = () => {
     if (onPress) {
@@ -33,70 +62,114 @@ export function ProMembershipCard({ onPress, style }: ProMembershipCardProps) {
       onPress={handlePress}
       style={[
         styles.container,
-        isDarkMode && {
-          backgroundColor: '#161F30',
-          borderColor: '#2A1A24',
+        {
+          backgroundColor: isDarkMode ? '#131926' : '#FFFFFF',
+          borderColor: isDarkMode ? '#2D3748' : '#FEE2E2',
         },
         style,
       ]}
     >
-      {/* Top Banner Row: Squircle Crown + Urgency Copy */}
+      {/* Animated Subtle Ambient Glow Line */}
+      <Animated.View
+        style={[
+          styles.glowHighlight,
+          {
+            borderColor: Colors.primary,
+          },
+          animatedGlowStyle,
+        ]}
+      />
+
+      {/* Top Tag: LIMITED TIME OFFER */}
+      <View style={styles.topBadgeRow}>
+        <View style={styles.urgencyPill}>
+          <View style={styles.livePulseDot} />
+          <Text style={styles.urgencyPillText}>LIMITED TIME VIP PASS • SAVE 80%</Text>
+        </View>
+        <View style={styles.pricePill}>
+          <Text style={styles.pricePillText}>$7.99 / year</Text>
+        </View>
+      </View>
+
+      {/* Hero Row: Squircle Crown + Personalized Headline */}
       <View style={styles.topRow}>
         <View style={styles.crownSquircle}>
           <Text style={styles.crownEmoji}>👑</Text>
         </View>
 
         <View style={styles.headlineWrap}>
-          <Text style={[styles.headlineText, isDarkMode && { color: colors.text }]}>
-            {athleteName}, want to gain 5–10 lbs weight?
+          <Text style={[styles.headlineText, { color: colors.text }]}>
+            {athleteName}, unlock your dream physique with PRO
           </Text>
-          <Text style={[styles.subheadlineText, isDarkMode && { color: colors.textSecondary }]}>
-            Start a 60–90 day plan today —{' '}
-            <Text style={styles.limitedOfferText}>limited offer $7.99/year</Text>
+          <Text style={[styles.subheadlineText, { color: colors.textSecondary }]}>
+            Full 3D muscle targeting, AI diet coach &amp; live health analytics.
           </Text>
         </View>
       </View>
 
-      {/* 4 Feature Circles Row (exact match to video recording frames 025/030/055) */}
+      {/* 4 Feature Badges Grid */}
       <View style={styles.featurePillsRow}>
         <View style={styles.featureItem}>
-          <View style={[styles.featureIconCircle, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' }]}>
+          <View
+            style={[
+              styles.featureIconCircle,
+              { backgroundColor: isDarkMode ? '#1E293B' : '#FFF0F0' },
+            ]}
+          >
             <Ionicons name="barbell" size={17} color={Colors.primary} />
           </View>
-          <Text style={[styles.featureLabel, isDarkMode && { color: colors.text }]}>Premium Workouts</Text>
+          <Text style={[styles.featureLabel, { color: colors.text }]}>3D Workouts</Text>
         </View>
 
         <View style={styles.featureItem}>
-          <View style={[styles.featureIconCircle, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' }]}>
-            <Ionicons name="analytics" size={17} color={Colors.accent} />
+          <View
+            style={[
+              styles.featureIconCircle,
+              { backgroundColor: isDarkMode ? '#1E293B' : '#FEF3C7' },
+            ]}
+          >
+            <Ionicons name="analytics" size={17} color="#D97706" />
           </View>
-          <Text style={[styles.featureLabel, isDarkMode && { color: colors.text }]}>Advanced Analytics</Text>
+          <Text style={[styles.featureLabel, { color: colors.text }]}>Live Analytics</Text>
         </View>
 
         <View style={styles.featureItem}>
-          <View style={[styles.featureIconCircle, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' }]}>
+          <View
+            style={[
+              styles.featureIconCircle,
+              { backgroundColor: isDarkMode ? '#1E293B' : '#ECFDF5' },
+            ]}
+          >
             <Ionicons name="restaurant" size={17} color="#10B981" />
           </View>
-          <Text style={[styles.featureLabel, isDarkMode && { color: colors.text }]}>Personalized Plans</Text>
+          <Text style={[styles.featureLabel, { color: colors.text }]}>AI Diet Plans</Text>
         </View>
 
         <View style={styles.featureItem}>
-          <View style={[styles.featureIconCircle, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' }]}>
+          <View
+            style={[
+              styles.featureIconCircle,
+              { backgroundColor: isDarkMode ? '#1E293B' : '#EEF2FF' },
+            ]}
+          >
             <Ionicons name="ban" size={17} color="#6366F1" />
           </View>
-          <Text style={[styles.featureLabel, isDarkMode && { color: colors.text }]}>Ad-Free Experience</Text>
+          <Text style={[styles.featureLabel, { color: colors.text }]}>100% Ad-Free</Text>
         </View>
       </View>
 
-      {/* Prominent Action Button: Upgrade Now > */}
-      <View style={styles.upgradeBtn}>
-        <Text style={styles.upgradeBtnText}>Upgrade Now ›</Text>
+      {/* Prominent High-Conversion Action Button */}
+      <View style={[styles.upgradeBtn, { backgroundColor: Colors.primary }]}>
+        <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+        <Text style={styles.upgradeBtnText}>Upgrade to SweatFlix PRO ›</Text>
       </View>
 
       {/* Footer Trust Badge */}
       <View style={styles.footerRow}>
         <Ionicons name="shield-checkmark" size={13} color="#10B981" />
-        <Text style={[styles.footerText, isDarkMode && { color: colors.textMuted }]}>Cancel anytime • No hidden charges</Text>
+        <Text style={[styles.footerText, { color: colors.textMuted }]}>
+          Cancel anytime • Instant activation • 7-day money-back guarantee
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -104,28 +177,76 @@ export function ProMembershipCard({ onPress, style }: ProMembershipCardProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: Spacing.md,
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1.5,
-    borderColor: '#FEE2E2',
+    marginVertical: 14,
+    position: 'relative',
+    overflow: 'hidden',
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
-    marginVertical: Spacing.sm,
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 4,
+  },
+  glowHighlight: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    pointerEvents: 'none',
+  },
+  topBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  urgencyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFE4E6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  livePulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  urgencyPillText: {
+    color: Colors.primary,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  pricePill: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  pricePillText: {
+    color: '#B45309',
+    fontSize: 10,
+    fontWeight: '800',
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: Spacing.sm,
+    marginBottom: 14,
   },
   crownSquircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 15,
     backgroundColor: '#FF8A1F',
     alignItems: 'center',
     justifyContent: 'center',
@@ -136,85 +257,73 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   crownEmoji: {
-    fontSize: 24,
+    fontSize: 26,
   },
   headlineWrap: {
     flex: 1,
   },
   headlineText: {
-    fontSize: 14,
-    fontWeight: Typography.weights.heavy,
-    color: Colors.textDark,
-    lineHeight: 19,
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
   },
   subheadlineText: {
     fontSize: 12,
-    color: Colors.textGrey,
-    marginTop: 2,
+    marginTop: 3,
     lineHeight: 16,
-  },
-  limitedOfferText: {
-    color: Colors.primary,
-    fontWeight: Typography.weights.bold,
   },
   featurePillsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginVertical: Spacing.sm,
-    paddingHorizontal: 4,
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingHorizontal: 2,
   },
   featureItem: {
     alignItems: 'center',
-    width: '24%',
+    flex: 1,
   },
   featureIconCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    alignItems: 'center',
     marginBottom: 5,
   },
   featureLabel: {
     fontSize: 10,
-    fontWeight: Typography.weights.semiBold,
-    color: Colors.textDark,
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 13,
   },
   upgradeBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 24,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.xs,
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginBottom: 10,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   upgradeBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: Typography.weights.heavy,
-    letterSpacing: 0.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 8,
   },
   footerText: {
-    fontSize: 11,
-    fontWeight: Typography.weights.medium,
-    color: Colors.textGrey,
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

@@ -7,6 +7,7 @@ export * from './OnboardingProgressBar';
 export * from './MealCard';
 export * from './RecipeModal';
 export * from './FloatingAiDietCoach';
+export * from './ProMembershipCard';
 export * from './home/HomeWaterChart';
 export * from './home/HomeWorkoutChart';
 export * from './home/HomeWeightChart';

@@ -37,8 +37,16 @@ export const LOCAL_MEAL_IMAGES = {
   mutton_curry: require('../assets/images/meals/mutton_curry.jpg'),
   chapli_kebab: require('../assets/images/meals/chapli_kebab.jpg'),
   halwa_puri: require('../assets/images/meals/halwa_puri.jpg'),
+  aloo_paratha: require('../assets/images/meals/aloo_paratha.jpg'),
+  seekh_kebab: require('../assets/images/meals/seekh_kebab.jpg'),
+  balochi_sajji: require('../assets/images/meals/balochi_sajji.jpg'),
+  tandoori_prawns: require('../assets/images/meals/tandoori_prawns.jpg'),
+  desi_omelette: require('../assets/images/meals/desi_omelette.jpg'),
 
   // --- British Self-Generated Authentic Food Photography (100% Halal) ---
+  full_english_breakfast: require('../assets/images/meals/full_english_breakfast.jpg'),
+  fish_and_chips: require('../assets/images/meals/fish_and_chips.jpg'),
+  scotch_egg: require('../assets/images/meals/scotch_egg.jpg'),
   bangers_and_mash: require('../assets/images/meals/bangers_and_mash.jpg'),
   beans_on_toast: require('../assets/images/meals/beans_on_toast.jpg'),
   beef_wellington: require('../assets/images/meals/beef_wellington.jpg'),
@@ -386,24 +394,26 @@ export function getVerifiedMealImage(title: string, type: string = 'lunch', cuis
   if (t.includes('masala chai') || t.includes('chai')) return { uri: VERIFIED_DISH_IMAGES.masala_chai_snack };
   if (t.includes('sprout')) return { uri: VERIFIED_DISH_IMAGES.moong_sprout_salad };
 
-  // Pakistani Specific
-  if (t.includes('ghotala')) return { uri: VERIFIED_DISH_IMAGES.desi_anda_ghotala };
-  if (t.includes('lahori chana') || t.includes('lahori cholay') || t.includes('cholay')) return { uri: VERIFIED_DISH_IMAGES.lahori_chana };
-  if (t.includes('paratha')) return { uri: VERIFIED_DISH_IMAGES.aloo_paratha };
-  if (t.includes('halwa puri') || t.includes('puri')) return { uri: VERIFIED_DISH_IMAGES.halwa_puri };
-  if (t.includes('karahi')) return { uri: VERIFIED_DISH_IMAGES.chicken_karahi };
-  if (t.includes('chapli')) return { uri: VERIFIED_DISH_IMAGES.chapli_kebab };
-  if (t.includes('seekh') || t.includes('kebab')) return { uri: VERIFIED_DISH_IMAGES.seekh_kebab };
-  if (t.includes('handi')) return { uri: VERIFIED_DISH_IMAGES.chicken_handi };
-  if (t.includes('nihari')) return { uri: VERIFIED_DISH_IMAGES.beef_nihari };
-  if (t.includes('haleem')) return { uri: VERIFIED_DISH_IMAGES.shahi_haleem };
-  if (t.includes('sajji')) return { uri: VERIFIED_DISH_IMAGES.balochi_sajji };
-  if (t.includes('namkeen gosht') || t.includes('shinwari')) return { uri: VERIFIED_DISH_IMAGES.namkeen_gosht };
-  if (t.includes('pulao')) return { uri: VERIFIED_DISH_IMAGES.dum_pukht_pulao };
-  if (t.includes('chana chaat')) return { uri: VERIFIED_DISH_IMAGES.karachi_chana_chaat };
-  if (t.includes('shami')) return { uri: VERIFIED_DISH_IMAGES.shami_kebab };
-  if (t.includes('dahi bhalla') || t.includes('bhalla')) return { uri: VERIFIED_DISH_IMAGES.dahi_bhalla };
-  if (t.includes('daal chawal')) return { uri: VERIFIED_DISH_IMAGES.daal_chawal };
+  // Pakistani Specific (100% Authentic Food Photography)
+  if (t.includes('ghotala') || t.includes('desi omelette') || (t.includes('omelette') && cuisine === 'pakistani')) return LOCAL_MEAL_IMAGES.desi_omelette;
+  if (t.includes('lahori chana') || t.includes('lahori cholay') || t.includes('cholay')) return LOCAL_MEAL_IMAGES.halwa_puri;
+  if (t.includes('paratha')) return LOCAL_MEAL_IMAGES.aloo_paratha;
+  if (t.includes('halwa puri') || t.includes('puri')) return LOCAL_MEAL_IMAGES.halwa_puri;
+  if (t.includes('karahi')) return LOCAL_MEAL_IMAGES.chicken_karahi;
+  if (t.includes('chapli')) return LOCAL_MEAL_IMAGES.chapli_kebab;
+  if (t.includes('seekh') || (t.includes('kebab') && cuisine === 'pakistani')) return LOCAL_MEAL_IMAGES.seekh_kebab;
+  if (t.includes('handi')) return LOCAL_MEAL_IMAGES.chicken_karahi;
+  if (t.includes('nihari')) return LOCAL_MEAL_IMAGES.beef_nihari;
+  if (t.includes('haleem')) return LOCAL_MEAL_IMAGES.shahi_haleem;
+  if (t.includes('sajji')) return LOCAL_MEAL_IMAGES.balochi_sajji;
+  if (t.includes('prawn') || t.includes('tandoori prawns')) return LOCAL_MEAL_IMAGES.tandoori_prawns;
+  if (t.includes('namkeen gosht') || t.includes('shinwari')) return LOCAL_MEAL_IMAGES.beef_nihari;
+  if (t.includes('pulao')) return LOCAL_MEAL_IMAGES.karachi_biryani;
+  if (t.includes('chana chaat')) return LOCAL_MEAL_IMAGES.halwa_puri;
+  if (t.includes('shami')) return LOCAL_MEAL_IMAGES.chapli_kebab;
+  if (t.includes('dahi bhalla') || t.includes('bhalla')) return LOCAL_MEAL_IMAGES.yogurt;
+  if (t.includes('mutton curry') || t.includes('gosht')) return LOCAL_MEAL_IMAGES.mutton_curry;
+  if (t.includes('daal chawal')) return LOCAL_MEAL_IMAGES.karachi_biryani;
 
   // Chinese Specific
   if (t.includes('wonton')) return { uri: VERIFIED_DISH_IMAGES.wonton_soup };
@@ -424,28 +434,28 @@ export function getVerifiedMealImage(title: string, type: string = 'lunch', cuis
   if (t.includes('egg tart')) return { uri: VERIFIED_DISH_IMAGES.egg_tarts };
   if (t.includes('hot & sour') || t.includes('hot and sour')) return { uri: VERIFIED_DISH_IMAGES.hot_sour_soup };
 
-  // British Specific
-  if (t.includes('full english') || t.includes('english breakfast')) return { uri: VERIFIED_DISH_IMAGES.full_english_breakfast };
-  if (t.includes('beans on toast')) return { uri: VERIFIED_DISH_IMAGES.beans_on_toast };
-  if (t.includes('soldiers')) return { uri: VERIFIED_DISH_IMAGES.eggs_soldiers };
-  if (t.includes('kipper')) return { uri: VERIFIED_DISH_IMAGES.kippers_toast };
-  if (t.includes('crumpet')) return { uri: VERIFIED_DISH_IMAGES.warm_crumpet };
-  if (t.includes('scone')) return { uri: VERIFIED_DISH_IMAGES.scones_jam };
-  if (t.includes('pasty') || t.includes('cornish')) return { uri: VERIFIED_DISH_IMAGES.cornish_pasty };
-  if (t.includes('scotch egg')) return { uri: VERIFIED_DISH_IMAGES.scotch_egg };
-  if (t.includes('jacket potato')) return { uri: VERIFIED_DISH_IMAGES.jacket_potato_tuna };
-  if (t.includes('ploughman')) return { uri: VERIFIED_DISH_IMAGES.ploughmans_lunch };
-  if (t.includes('coronation')) return { uri: VERIFIED_DISH_IMAGES.coronation_chicken };
-  if (t.includes('welsh rarebit')) return { uri: VERIFIED_DISH_IMAGES.welsh_rarebit };
-  if (t.includes('kedgeree')) return { uri: VERIFIED_DISH_IMAGES.kedgeree };
-  if (t.includes('shepherd')) return { uri: VERIFIED_DISH_IMAGES.shepherds_pie };
-  if (t.includes('fish and chips') || t.includes('fish & chips')) return { uri: VERIFIED_DISH_IMAGES.fish_and_chips };
-  if (t.includes('yorkshire') || t.includes('roast beef')) return { uri: VERIFIED_DISH_IMAGES.roast_beef_yorkshire };
-  if (t.includes('bangers')) return { uri: VERIFIED_DISH_IMAGES.bangers_and_mash };
-  if (t.includes('wellington')) return { uri: VERIFIED_DISH_IMAGES.beef_wellington };
-  if (t.includes('cottage pie')) return { uri: VERIFIED_DISH_IMAGES.cottage_pie };
-  if (t.includes('toad in the hole')) return { uri: VERIFIED_DISH_IMAGES.toad_in_the_hole };
-  if (t.includes('welsh cake')) return { uri: VERIFIED_DISH_IMAGES.welsh_cakes };
+  // British Specific (100% Authentic Food Photography)
+  if (t.includes('full english') || t.includes('english breakfast')) return LOCAL_MEAL_IMAGES.full_english_breakfast;
+  if (t.includes('beans on toast')) return LOCAL_MEAL_IMAGES.beans_on_toast;
+  if (t.includes('soldiers')) return LOCAL_MEAL_IMAGES.beans_on_toast;
+  if (t.includes('kipper')) return LOCAL_MEAL_IMAGES.salmon;
+  if (t.includes('crumpet')) return LOCAL_MEAL_IMAGES.beans_on_toast;
+  if (t.includes('scone')) return LOCAL_MEAL_IMAGES.dessert_cup;
+  if (t.includes('pasty') || t.includes('cornish')) return LOCAL_MEAL_IMAGES.beef_wellington;
+  if (t.includes('scotch egg')) return LOCAL_MEAL_IMAGES.scotch_egg;
+  if (t.includes('jacket potato')) return LOCAL_MEAL_IMAGES.cottage_pie;
+  if (t.includes('ploughman')) return LOCAL_MEAL_IMAGES.welsh_rarebit;
+  if (t.includes('coronation')) return LOCAL_MEAL_IMAGES.chicken;
+  if (t.includes('welsh rarebit')) return LOCAL_MEAL_IMAGES.welsh_rarebit;
+  if (t.includes('kedgeree')) return LOCAL_MEAL_IMAGES.karachi_biryani;
+  if (t.includes('shepherd')) return LOCAL_MEAL_IMAGES.shepherds_pie;
+  if (t.includes('fish and chips') || t.includes('fish & chips')) return LOCAL_MEAL_IMAGES.fish_and_chips;
+  if (t.includes('yorkshire') || t.includes('roast beef')) return LOCAL_MEAL_IMAGES.roast_beef_yorkshire;
+  if (t.includes('bangers') || t.includes('mash')) return LOCAL_MEAL_IMAGES.bangers_and_mash;
+  if (t.includes('wellington')) return LOCAL_MEAL_IMAGES.beef_wellington;
+  if (t.includes('cottage pie')) return LOCAL_MEAL_IMAGES.cottage_pie;
+  if (t.includes('toad in the hole')) return LOCAL_MEAL_IMAGES.roast_beef_yorkshire;
+  if (t.includes('welsh cake')) return LOCAL_MEAL_IMAGES.dessert_cup;
   if (t.includes('biscuit') || (t.includes('tea') && cuisine === 'british')) return { uri: VERIFIED_DISH_IMAGES.tea_biscuits };
 
   if (t.includes('curry') || t.includes('tikka') || t.includes('spicy chicken')) {

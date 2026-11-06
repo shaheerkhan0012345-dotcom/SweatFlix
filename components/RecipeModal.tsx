@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -48,7 +48,6 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
   onAskAi,
 }) => {
   const { colors, isDarkMode } = useTheme();
-  const [imageError, setImageError] = useState(false);
 
   if (!meal) return null;
 
@@ -61,14 +60,18 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
       ? cost
       : (meal.costUsd || meal.ingredients.reduce((s: number, i: any) => s + (i.costUsd || i.costPkr || 0), 0));
 
-  let rawImage = meal.image;
-  if (imageError || !rawImage) {
-    const isUs = (meal.id && String(meal.id).startsWith('us-')) || meal.cuisine === 'american';
-    const verified = getVerifiedMealImage(meal.title, meal.type, isUs ? 'american' : 'asian');
-    if (verified) {
-      rawImage = verified;
-    }
-  }
+  // Resolve genuine authentic food photo with cuisine awareness
+  const cuisine =
+    meal.cuisine ||
+    (meal.id && String(meal.id).startsWith('pk-')
+      ? 'pakistani'
+      : meal.id && String(meal.id).startsWith('uk-')
+      ? 'british'
+      : meal.id && String(meal.id).startsWith('us-')
+      ? 'american'
+      : 'asian');
+  const verified = getVerifiedMealImage(meal.title, meal.type, cuisine);
+  const rawImage = verified || meal.image;
   const resolvedImage = resolveSafeImageSource(rawImage);
 
   return (
@@ -109,7 +112,6 @@ export const RecipeModal: React.FC<RecipeModalProps> = ({
                 contentFit="cover"
                 transition={250}
                 cachePolicy="disk"
-                onError={() => setImageError(true)}
               />
               <View style={styles.imageOverlayStrip}>
                 <View style={styles.timeBadge}>

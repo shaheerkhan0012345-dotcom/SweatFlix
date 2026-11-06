@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -52,17 +52,19 @@ export const MealCard: React.FC<MealCardProps> = ({
   onAskAi,
 }) => {
   const { colors, isDarkMode } = useTheme();
-  const [imageError, setImageError] = useState(false);
 
-  // Resolve genuine food photo or fallback accurately without overriding distinct dishes
-  let rawImage = meal.image;
-  if (imageError || !rawImage) {
-    const isUs = (meal.id && String(meal.id).startsWith('us-')) || meal.cuisine === 'american';
-    const verified = getVerifiedMealImage(meal.title, meal.type, isUs ? 'american' : 'asian');
-    if (verified) {
-      rawImage = verified;
-    }
-  }
+  // Resolve genuine authentic food photo with cuisine awareness
+  const cuisine =
+    meal.cuisine ||
+    (meal.id && String(meal.id).startsWith('pk-')
+      ? 'pakistani'
+      : meal.id && String(meal.id).startsWith('uk-')
+      ? 'british'
+      : meal.id && String(meal.id).startsWith('us-')
+      ? 'american'
+      : 'asian');
+  const verified = getVerifiedMealImage(meal.title, meal.type, cuisine);
+  const rawImage = verified || meal.image;
   const resolvedImage = resolveSafeImageSource(rawImage);
 
   const formattedCost =
@@ -89,7 +91,6 @@ export const MealCard: React.FC<MealCardProps> = ({
             contentFit="cover"
             transition={200}
             cachePolicy="disk"
-            onError={() => setImageError(true)}
             accessibilityLabel={meal.title}
           />
           {isEaten && (

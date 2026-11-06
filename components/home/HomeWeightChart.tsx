@@ -24,19 +24,11 @@ export const HomeWeightChart: React.FC = () => {
     setInputWeight(currentWeight.toFixed(1));
   }
 
-  // Use last 7 points
+  // Use real recorded points (no fake past data)
   const pointsData = React.useMemo(() => {
     const history = metrics.weightHistory || [];
     if (history.length === 0) {
-      return [
-        { label: 'D1', val: currentWeight + 1.2 },
-        { label: 'D2', val: currentWeight + 0.9 },
-        { label: 'D3', val: currentWeight + 0.7 },
-        { label: 'D4', val: currentWeight + 0.5 },
-        { label: 'D5', val: currentWeight + 0.3 },
-        { label: 'D6', val: currentWeight + 0.1 },
-        { label: 'Today', val: currentWeight },
-      ];
+      return [{ label: 'Today', val: currentWeight }];
     }
     const sliced = history.slice(-7);
     return sliced.map((item, idx) => {
@@ -64,12 +56,14 @@ export const HomeWeightChart: React.FC = () => {
   const range = maxVal - minVal || 1;
 
   const pointsCoordinates = pointsData.map((p, idx) => {
-    const x = (idx / (pointsData.length - 1 || 1)) * (chartWidth - 20) + 10;
+    const x = pointsData.length === 1 ? chartWidth / 2 : (idx / (pointsData.length - 1 || 1)) * (chartWidth - 20) + 10;
     const y = chartHeight - ((p.val - minVal) / range) * (chartHeight - 20) - 10;
     return { x, y, val: p.val, label: p.label };
   });
 
-  const polylinePoints = pointsCoordinates.map((p) => `${p.x},${p.y}`).join(' ');
+  const polylinePoints = pointsCoordinates.length === 1
+    ? `10,${pointsCoordinates[0].y} ${chartWidth - 10},${pointsCoordinates[0].y}`
+    : pointsCoordinates.map((p) => `${p.x},${p.y}`).join(' ');
   const polygonPoints = `10,${chartHeight} ${polylinePoints} ${chartWidth - 10},${chartHeight}`;
 
   const targetY = chartHeight - ((targetWeight - minVal) / range) * (chartHeight - 20) - 10;

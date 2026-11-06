@@ -19,6 +19,9 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": true
+      },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://ylkfddrtocsbnfvwewei.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_ySHAccZKvQptbsZy0aOdDg_U2f_hJx0",

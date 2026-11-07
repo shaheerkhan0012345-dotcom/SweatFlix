@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   ActivityIndicator,
   Alert,
@@ -1150,31 +1151,35 @@ export default function DietScreen() {
               badgeColor: '#EC4899',
               meal: currentDayMeals.snack,
             },
-          ].map(({ slot, label, badgeColor, meal }) => {
+          ].map(({ slot, label, badgeColor, meal }, index) => {
             const isEaten = !!eatenMealIds[meal.id];
             const isSaved = savedMeals.some((m) => m.id === meal.id || m.title === meal.title);
             const costUsd = meal.costUsd || getAsianMealCostUsd(meal);
 
             return (
-              <MealCard
+              <Animated.View
                 key={`${meal.id}-${storageDateKey}-${selectedCuisine}`}
-                meal={meal}
-                typeLabel={label}
-                badgeColor={badgeColor}
-                kcal={meal.baseKcal}
-                protein={meal.baseProtein}
-                carbs={meal.baseCarbs}
-                fat={meal.baseFat}
-                cost={costUsd}
-                currencySymbol="$"
-                isEaten={isEaten}
-                isSaved={isSaved}
-                onViewRecipe={(m) => setSelectedRecipeMeal(m)}
-                onReplace={(m) => handleOpenReplace(m)}
-                onToggleEaten={() => handleToggleEaten(meal)}
-                onToggleSave={() => handleToggleSave(meal)}
-                onAskAi={() => { }}
-              />
+                entering={FadeInDown.delay(index * 60).duration(260)}
+              >
+                <MealCard
+                  meal={meal}
+                  typeLabel={label}
+                  badgeColor={badgeColor}
+                  kcal={meal.baseKcal}
+                  protein={meal.baseProtein}
+                  carbs={meal.baseCarbs}
+                  fat={meal.baseFat}
+                  cost={costUsd}
+                  currencySymbol="$"
+                  isEaten={isEaten}
+                  isSaved={isSaved}
+                  onViewRecipe={(m) => setSelectedRecipeMeal(m)}
+                  onReplace={(m) => handleOpenReplace(m)}
+                  onToggleEaten={() => handleToggleEaten(meal)}
+                  onToggleSave={() => handleToggleSave(meal)}
+                  onAskAi={() => { }}
+                />
+              </Animated.View>
             );
           })}
         </View>

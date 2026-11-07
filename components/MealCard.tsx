@@ -89,8 +89,8 @@ export const MealCard: React.FC<MealCardProps> = ({
             source={resolvedImage}
             style={styles.thumbnailImage}
             contentFit="cover"
-            transition={200}
-            cachePolicy="disk"
+            transition={150}
+            cachePolicy="memory-disk"
             accessibilityLabel={meal.title}
           />
           {isEaten && (

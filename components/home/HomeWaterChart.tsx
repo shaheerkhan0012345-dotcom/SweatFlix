@@ -41,14 +41,7 @@ export const HomeWaterChart: React.FC = () => {
         amount = currentMl;
       } else {
         const entry = history.find((h) => h.date === dateStr);
-        if (entry) {
-          amount = entry.amountMl;
-        } else if (idx < todayIndex) {
-          // past days realistic baseline
-          amount = Math.round(targetMl * (0.8 + (idx % 3) * 0.08));
-        } else {
-          amount = 0;
-        }
+        amount = entry ? entry.amountMl : 0;
       }
 
       return {

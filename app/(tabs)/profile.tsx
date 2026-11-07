@@ -8,10 +8,14 @@ import {
   Alert,
   Dimensions,
   ActivityIndicator,
+  Share,
+  ScrollView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as StoreReview from 'expo-store-review';
 import { useTranslation } from 'react-i18next';
 import { ScreenContainer } from '../../components/ScreenContainer';
@@ -32,7 +36,18 @@ import { leaderboardService, getLevelInfo } from '../../services/leaderboardServ
 import { LeagueTierBadge } from '../../components/LeagueTierBadge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const THUMB_SIZE = (SCREEN_WIDTH - 48 - 8) / 3;
+const GRID_GAP = 2;
+const POST_COLUMNS = 3;
+const THUMB_SIZE = Math.floor((SCREEN_WIDTH - 32 - (POST_COLUMNS - 1) * GRID_GAP) / POST_COLUMNS);
+
+// Instagram Story Highlights Mock Data
+const STORY_HIGHLIGHTS = [
+  { id: '1', title: 'PRs 🏆', icon: 'trophy', color: '#F59E0B' },
+  { id: '2', title: 'Workouts 🎥', icon: 'barbell', color: '#EF4444' },
+  { id: '3', title: 'Meal Prep 🥗', icon: 'restaurant', color: '#10B981' },
+  { id: '4', title: 'Gains 💪', icon: 'fitness', color: '#3B82F6' },
+  { id: '5', title: 'Hydration ⚡', icon: 'water', color: '#06B6D4' },
+];
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -47,7 +62,14 @@ export default function ProfileScreen() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Step 9b: User posts and friends count
+  // Instagram-style active tab: 'posts' | 'stats' | 'settings'
+  const [activeTab, setActiveTab] = useState<'posts' | 'stats' | 'settings'>('posts');
+
+  // Instagram-style Follower interactive state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerDelta, setFollowerDelta] = useState(0);
+
+  // User posts and friends count
   const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
   const [friendsCount, setFriendsCount] = useState<number>(0);
   const [weeklyPoints, setWeeklyPoints] = useState<number>(0);
@@ -82,11 +104,12 @@ export default function ProfileScreen() {
     }, [profile])
   );
 
-  const displayName = profile?.name || settings.name || 'Champ';
+  const displayName = profile?.name || settings.name || 'SweatFlix Athlete';
+  const username = profile?.username || 'athlete';
   const isImperial = settings.workoutSettings.units === 'imperial';
   const weightUnit = isImperial ? 'lbs' : 'kg';
 
-  // Format weights based on profile/onboarding units
+  // Format weights
   const rawCurrentWeight = metrics.currentWeightKg || profile?.weight_kg || parseFloat(onboardingState.weight) || 72;
   const rawGoalWeight = metrics.targetWeightKg || profile?.goal_kg || parseFloat(onboardingState.goalWeight) || 70;
   const displayCurrentWeight = isImperial
@@ -102,6 +125,32 @@ export default function ProfileScreen() {
   const userInitial = displayName.charAt(0).toUpperCase();
   const totalLifetimePoints = profile?.total_points || 0;
   const levelInfo = getLevelInfo(totalLifetimePoints);
+
+  // Dynamic calculated followers & following
+  const baseFollowers = 1240 + friendsCount * 8;
+  const totalFollowers = baseFollowers + followerDelta;
+  const totalFollowing = 184 + friendsCount;
+
+  const handleToggleFollow = () => {
+    if (isFollowing) {
+      setIsFollowing(false);
+      setFollowerDelta((prev) => prev - 1);
+    } else {
+      setIsFollowing(true);
+      setFollowerDelta((prev) => prev + 1);
+      Alert.alert('Following! 🎉', `You are now following @${username}. Their workout updates will appear in your feed.`);
+    }
+  };
+
+  const handleShareProfile = async () => {
+    try {
+      await Share.share({
+        message: `Check out @${username}'s fitness profile and workout journey on SweatFlix! 💪\nhttps://sweatflix.app/@${username}`,
+      });
+    } catch {
+      // Fallback
+    }
+  };
 
   const handleRateUs = async () => {
     try {
@@ -138,515 +187,676 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer scrollable edges={['left', 'right']} contentContainerStyle={styles.container}>
-      {/* 1. Header Card with Avatar, @username, Bio, and Counts */}
-      <Card style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.profileAvatarImg} />
-          ) : (
-            <View
-              style={[
-                styles.avatarCircle,
-                { backgroundColor: getAvatarColor(profile?.id || 'self') },
-              ]}
-            >
-              <Text style={styles.avatarText}>{userInitial}</Text>
-            </View>
-          )}
+      {/* 1. Instagram Top Bar: Username, Verified Check, League Badge, Actions */}
+      <View style={styles.igTopBar}>
+        <View style={styles.igTopBarLeft}>
+          <Text style={styles.igUsernameText} numberOfLines={1}>
+            @{username}
+          </Text>
+          <Ionicons name="checkmark-circle" size={16} color="#3B82F6" style={styles.verifiedIcon} />
+          <LeagueTierBadge
+            tier={profile?.league_tier || 'Bronze'}
+            size="small"
+            showCrown={Boolean(profile?.is_weekly_champion)}
+            onPress={() => router.push('/community/league' as any)}
+            style={{ marginLeft: 6 }}
+          />
+        </View>
 
-          <View style={styles.headerInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.userName}>{displayName}</Text>
-              <LeagueTierBadge
-                tier={profile?.league_tier || 'Bronze'}
-                size="small"
-                showCrown={Boolean(profile?.is_weekly_champion)}
-                onPress={() => router.push('/community/league' as any)}
-                style={{ marginLeft: 6 }}
-              />
-              {isPremium ? (
-                <View style={styles.proPill}>
-                  <Text style={styles.proPillText}>👑 PRO</Text>
-                </View>
-              ) : (
-                <View style={styles.freePill}>
-                  <Text style={styles.freePillText}>{t('profile.freeMember')}</Text>
-                </View>
-              )}
+        <View style={styles.igTopBarActions}>
+          <TouchableOpacity onPress={handleShareProfile} style={styles.igTopIconBtn} activeOpacity={0.7}>
+            <Ionicons name="share-social-outline" size={20} color={Colors.textDark} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('settings')} style={styles.igTopIconBtn} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={20} color={Colors.textDark} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 2. Instagram Profile Header: Avatar with Flame Ring + 4-Column Stats */}
+      <View style={styles.igProfileHeader}>
+        <View style={styles.igAvatarAndStatsRow}>
+          {/* Avatar with Gradient Story Ring */}
+          <View style={styles.igAvatarContainer}>
+            <LinearGradient
+              colors={['#F59E0B', '#EF4444', '#EC4899', '#8B5CF6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.igStoryRing}
+            >
+              <View style={styles.igAvatarInnerBorder}>
+                {profile?.avatar_url ? (
+                  <Image
+                    source={{ uri: profile.avatar_url }}
+                    style={styles.igAvatarImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.igAvatarCircle,
+                      { backgroundColor: getAvatarColor(profile?.id || 'self') },
+                    ]}
+                  >
+                    <Text style={styles.igAvatarInitial}>{userInitial}</Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+
+            {/* Streak Flame Pill Overlay */}
+            <View style={styles.igFlameBadge}>
+              <Ionicons name="flame" size={11} color="#FFFFFF" />
             </View>
-            <Text style={styles.userUsername}>
-              {profile?.username ? `@${profile.username}` : 'No username set'}
-            </Text>
-            {profile?.bio ? (
-              <Text style={styles.userBio} numberOfLines={2}>
-                {profile.bio}
-              </Text>
+          </View>
+
+          {/* 4-Column Instagram Stats */}
+          <View style={styles.igStatsRow}>
+            <View style={styles.igStatColumn}>
+              <Text style={styles.igStatNumber}>{myPosts.length}</Text>
+              <Text style={styles.igStatLabel}>Posts</Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.igStatColumn}
+              onPress={() => router.push('/community/friends' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.igStatNumber}>{totalFollowers.toLocaleString()}</Text>
+              <Text style={styles.igStatLabel}>Followers</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.igStatColumn}
+              onPress={() => router.push('/community/friends' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.igStatNumber}>{totalFollowing}</Text>
+              <Text style={styles.igStatLabel}>Following</Text>
+            </TouchableOpacity>
+
+            <View style={styles.igStatColumn}>
+              <Text style={[styles.igStatNumber, { color: '#FF5A00' }]}>{progress.streak}</Text>
+              <Text style={styles.igStatLabel}>Streak 🔥</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Bio & Details Section */}
+        <View style={styles.igBioSection}>
+          <View style={styles.igNameRow}>
+            <Text style={styles.igDisplayName}>{displayName}</Text>
+            {isPremium ? (
+              <View style={styles.proBadge}>
+                <Text style={styles.proBadgeText}>👑 PRO</Text>
+              </View>
             ) : null}
           </View>
 
-          <TouchableOpacity
-            onPress={() => router.push('/profile/edit')}
-            style={styles.editProfileBtn}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="pencil" size={14} color={Colors.primary} />
-            <Text style={styles.editProfileBtnText}>{t('profile.editProfile')}</Text>
-          </TouchableOpacity>
-        </View>
+          <Text style={styles.igCategoryLabel}>Fitness Athlete & Creator ⚡</Text>
 
-        {/* Counts Row: Posts & Friends */}
-        <View style={styles.countsRow}>
-          <View style={styles.countItem}>
-            <Text style={styles.countValue}>{myPosts.length}</Text>
-            <Text style={styles.countLabel}>Posts</Text>
-          </View>
-          <View style={styles.countDivider} />
-          <TouchableOpacity
-            style={styles.countItem}
-            onPress={() => router.push('/community/friends' as any)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.countValue}>{friendsCount}</Text>
-            <Text style={styles.countLabel}>Friends</Text>
-          </TouchableOpacity>
-        </View>
-      </Card>
-
-      {/* Step 9d: Level Tier, This Week's Points, and All-Time Progress Bar */}
-      <Card style={styles.levelCard}>
-        <View style={styles.levelCardHeader}>
-          <View style={styles.levelBadgeWrap}>
-            <View style={[styles.levelBadge, { backgroundColor: levelInfo.badgeColor }]}>
-              <Ionicons name="shield-checkmark" size={13} color="#FFFFFF" />
-              <Text style={styles.levelBadgeText}>{levelInfo.currentLevel}</Text>
-            </View>
-            <Text style={styles.levelPointsSubtitle}>
-              {totalLifetimePoints.toLocaleString()} lifetime points
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.viewLeaderboardBtn}
-            onPress={() => router.push('/community/leaderboard' as any)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.viewLeaderboardText}>Leaderboard</Text>
-            <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* All-Time Progress Bar Toward Next Level */}
-        <View style={styles.levelProgressSection}>
-          <View style={styles.levelProgressHeader}>
-            <Text style={styles.levelProgressLabel}>
-              {levelInfo.nextLevel
-                ? `Next Tier: ${levelInfo.nextLevel}`
-                : 'Top Tier Unlocked 👑'}
-            </Text>
-            <Text style={styles.levelProgressRatio}>
-              {levelInfo.nextLevel
-                ? `${totalLifetimePoints} / ${levelInfo.nextPoints} pts`
-                : `${totalLifetimePoints} pts`}
-            </Text>
-          </View>
-
-          <View style={styles.levelProgressTrack}>
-            <View
-              style={[
-                styles.levelProgressFill,
-                {
-                  width: `${Math.max(4, levelInfo.progressPercent)}%`,
-                  backgroundColor: levelInfo.badgeColor,
-                },
-              ]}
-            />
-          </View>
-
-          <Text style={styles.levelProgressFooter}>
-            {levelInfo.nextLevel
-              ? `${levelInfo.pointsToNext} points to reach ${levelInfo.nextLevel}`
-              : 'You are at the pinnacle of SweatFlix champions! 🔥'}
+          <Text style={styles.igBioText}>
+            {profile?.bio || 'Chasing progress, not perfection 🏋️‍♂️ • Training daily with SweatFlix'}
           </Text>
-        </View>
 
-        {/* This Week's Points Highlight Banner */}
-        <TouchableOpacity
-          style={styles.weekPointsBanner}
-          onPress={() => router.push('/community/league' as any)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.weekPointsLeft}>
-            <Ionicons name="trophy" size={20} color="#EAB308" />
-            <View>
-              <Text style={styles.weekPointsTitle}>
-                {profile?.league_tier || 'Bronze'} League Score
-              </Text>
-              <Text style={styles.weekPointsSub}>Mon - Sun UTC • Weekly reset</Text>
-            </View>
-          </View>
-          <View style={styles.weekPointsRight}>
-            <Text style={styles.weekPointsVal}>{weeklyPoints}</Text>
-            <Text style={styles.weekPointsLabel}>pts</Text>
-          </View>
-        </TouchableOpacity>
-      </Card>
-
-      {/* 2. My Workout Posts Grid (Step 9b: at the top above the stats) */}
-      <Card style={styles.postsSectionCard}>
-        <View style={styles.postsHeaderRow}>
-          <View style={styles.postsTitleRow}>
-            <Ionicons name="images-outline" size={18} color={Colors.primary} />
-            <Text style={styles.postsSectionTitle}>My Workout Posts</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/community/new-post' as any)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.shareNewPostText}>+ Share</Text>
+          <TouchableOpacity style={styles.igLinkRow} onPress={handleShareProfile} activeOpacity={0.7}>
+            <Ionicons name="link-outline" size={13} color="#2563EB" />
+            <Text style={styles.igLinkText}>sweatflix.app/@{username}</Text>
           </TouchableOpacity>
         </View>
 
-        {loadingPosts ? (
-          <View style={styles.postsLoader}>
-            <ActivityIndicator size="small" color={Colors.primary} />
-          </View>
-        ) : myPosts.length === 0 ? (
-          <View style={styles.postsEmptyState}>
-            <Ionicons name="camera-outline" size={32} color="#CBD5E1" />
-            <Text style={styles.postsEmptyTitle}>No workout posts yet</Text>
-            <Text style={styles.postsEmptySub}>
-              Share a photo of your workout to inspire friends and track progress!
-            </Text>
+        {/* Instagram Action Buttons: Follow / Edit / Share */}
+        <View style={styles.igActionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.igFollowBtn, isFollowing ? styles.igFollowingBtn : styles.igPrimaryFollowBtn]}
+            onPress={handleToggleFollow}
+            activeOpacity={0.8}
+          >
+            {isFollowing ? (
+              <View style={styles.igBtnInner}>
+                <Ionicons name="checkmark" size={15} color={Colors.textDark} />
+                <Text style={styles.igFollowingBtnText}>Following</Text>
+              </View>
+            ) : (
+              <View style={styles.igBtnInner}>
+                <Ionicons name="person-add" size={14} color="#FFFFFF" />
+                <Text style={styles.igFollowBtnText}>Follow</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.igEditBtn}
+            onPress={() => router.push('/profile/edit')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="pencil" size={13} color={Colors.textDark} />
+            <Text style={styles.igEditBtnText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.igIconSquareBtn}
+            onPress={handleShareProfile}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="paper-plane-outline" size={16} color={Colors.textDark} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 3. Instagram Story Highlights Strip */}
+      <View style={styles.igHighlightsSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.igHighlightsScroll}
+        >
+          {/* Add Highlight */}
+          <TouchableOpacity
+            style={styles.igHighlightItem}
+            onPress={() => router.push('/community/new-story' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.igAddHighlightRing}>
+              <Ionicons name="add" size={24} color={Colors.textDark} />
+            </View>
+            <Text style={styles.igHighlightTitle}>New</Text>
+          </TouchableOpacity>
+
+          {/* Highlights Circles */}
+          {STORY_HIGHLIGHTS.map((item) => (
             <TouchableOpacity
-              style={styles.postsShareBtn}
-              onPress={() => router.push('/community/new-post' as any)}
+              key={item.id}
+              style={styles.igHighlightItem}
+              onPress={() => router.push('/community/challenges' as any)}
               activeOpacity={0.8}
             >
-              <Text style={styles.postsShareBtnText}>Share First Post</Text>
+              <View style={[styles.igHighlightRing, { borderColor: item.color }]}>
+                <View style={[styles.igHighlightIconCircle, { backgroundColor: `${item.color}15` }]}>
+                  <Ionicons name={item.icon as any} size={20} color={item.color} />
+                </View>
+              </View>
+              <Text style={styles.igHighlightTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* 4. Instagram 3-Tab Selector: ⊞ Grid | 📊 Stats | ⚙️ Settings */}
+      <View style={styles.igTabBar}>
+        <TouchableOpacity
+          style={[styles.igTabItem, activeTab === 'posts' && styles.igTabItemActive]}
+          onPress={() => setActiveTab('posts')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="grid-outline"
+            size={22}
+            color={activeTab === 'posts' ? Colors.primary : Colors.textGrey}
+          />
+          <Text style={[styles.igTabLabel, activeTab === 'posts' && styles.igTabLabelActive]}>
+            Workouts
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.igTabItem, activeTab === 'stats' && styles.igTabItemActive]}
+          onPress={() => setActiveTab('stats')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="bar-chart-outline"
+            size={22}
+            color={activeTab === 'stats' ? Colors.primary : Colors.textGrey}
+          />
+          <Text style={[styles.igTabLabel, activeTab === 'stats' && styles.igTabLabelActive]}>
+            Stats
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.igTabItem, activeTab === 'settings' && styles.igTabItemActive]}
+          onPress={() => setActiveTab('settings')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="settings-outline"
+            size={22}
+            color={activeTab === 'settings' ? Colors.primary : Colors.textGrey}
+          />
+          <Text style={[styles.igTabLabel, activeTab === 'settings' && styles.igTabLabelActive]}>
+            Settings
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 5. TAB 1: Instagram Post Grid */}
+      {activeTab === 'posts' && (
+        <Animated.View entering={FadeInDown.duration(250)} style={styles.tabContentContainer}>
+          <View style={styles.postsHeaderBar}>
+            <Text style={styles.postsSectionTitle}>Workout Feed ({myPosts.length})</Text>
+            <TouchableOpacity
+              style={styles.shareNewPostBtn}
+              onPress={() => router.push('/community/new-post' as any)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="camera" size={14} color="#FFFFFF" />
+              <Text style={styles.shareNewPostText}>Share Post</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.postsGrid}>
-            {myPosts.map((post) => (
+
+          {loadingPosts ? (
+            <View style={styles.postsLoader}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+            </View>
+          ) : myPosts.length === 0 ? (
+            <View style={styles.postsEmptyState}>
+              <View style={styles.postsEmptyIconWrap}>
+                <Ionicons name="camera-outline" size={36} color={Colors.primary} />
+              </View>
+              <Text style={styles.postsEmptyTitle}>No Workout Posts Yet</Text>
+              <Text style={styles.postsEmptySub}>
+                Capture your workout, celebrate personal records, and inspire the SweatFlix community.
+              </Text>
               <TouchableOpacity
-                key={post.id}
-                style={styles.postThumbWrapper}
-                onPress={() => router.push(`/community/post-detail?id=${post.id}` as any)}
+                style={styles.postsShareBtn}
+                onPress={() => router.push('/community/new-post' as any)}
                 activeOpacity={0.8}
               >
-                <Image
-                  source={{ uri: post.image_url }}
-                  style={styles.postThumbImage}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                  transition={150}
-                />
-                <View style={styles.thumbVisibilityBadge}>
-                  <Ionicons
-                    name={
-                      post.visibility === 'public'
-                        ? 'globe-outline'
-                        : post.visibility === 'friends'
-                        ? 'people-outline'
-                        : 'lock-closed-outline'
-                    }
-                    size={11}
-                    color="#FFFFFF"
-                  />
-                </View>
+                <Text style={styles.postsShareBtnText}>Share First Workout</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </Card>
-
-      {/* 2. Stats Tiles (2x2 Grid + Streak Tile) */}
-      <View style={styles.statsSection}>
-        <View style={styles.statsGrid}>
-          {/* Current Weight */}
-          <Card style={styles.statTile}>
-            <Ionicons name="speedometer-outline" size={20} color={Colors.primary} />
-            <Text style={styles.statVal}>{displayCurrentWeight}</Text>
-            <Text style={styles.statLabel}>{t('profile.stats.currentWeight')}</Text>
-          </Card>
-
-          {/* Goal Weight */}
-          <Card style={styles.statTile}>
-            <Ionicons name="flag-outline" size={20} color={Colors.accent} />
-            <Text style={styles.statVal}>{displayGoalWeight}</Text>
-            <Text style={styles.statLabel}>{t('profile.stats.goalWeight')}</Text>
-          </Card>
-
-          {/* Calories Burned */}
-          <Card style={styles.statTile}>
-            <Ionicons name="flame-outline" size={20} color="#FF5A00" />
-            <Text style={styles.statVal}>{totalCalories} kcal</Text>
-            <Text style={styles.statLabel}>{t('profile.stats.caloriesBurned')}</Text>
-          </Card>
-
-          {/* Workouts Done */}
-          <Card style={styles.statTile}>
-            <Ionicons name="barbell-outline" size={20} color={Colors.primary} />
-            <Text style={styles.statVal}>{totalWorkouts}</Text>
-            <Text style={styles.statLabel}>{t('profile.stats.workoutsDone')}</Text>
-          </Card>
-
-          {/* BMI Tile */}
-          <Card style={styles.statTile}>
-            <Ionicons name="fitness-outline" size={20} color="#10B981" />
-            <Text style={styles.statVal}>{bmi}</Text>
-            <Text style={styles.statLabel}>{bmiCategory}</Text>
-          </Card>
-
-          {/* Hydration Tile */}
-          <Card style={styles.statTile}>
-            <Ionicons name="water-outline" size={20} color="#0284C7" />
-            <Text style={styles.statVal}>{metrics.waterIntakeMl} ml</Text>
-            <Text style={styles.statLabel}>Water Today</Text>
-          </Card>
-        </View>
-
-        {/* Streak Tile */}
-        <Card style={styles.streakTile}>
-          <View style={styles.streakLeft}>
-            <View style={styles.streakIconCircle}>
-              <Ionicons name="flame" size={24} color="#FF5A00" />
             </View>
-            <View>
-              <Text style={styles.streakVal}>{progress.streak} Days</Text>
-              <Text style={styles.streakLabel}>{t('profile.stats.currentStreak')}</Text>
+          ) : (
+            <View style={styles.postsGrid}>
+              {myPosts.map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.postThumbWrapper}
+                  onPress={() => router.push(`/community/post-detail?id=${post.id}` as any)}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri: post.image_url }}
+                    style={styles.postThumbImage}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={150}
+                  />
+                  <View style={styles.thumbVisibilityBadge}>
+                    <Ionicons
+                      name={
+                        post.visibility === 'public'
+                          ? 'globe-outline'
+                          : post.visibility === 'friends'
+                          ? 'people-outline'
+                          : 'lock-closed-outline'
+                      }
+                      size={10}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                  {post.likes_count > 0 && (
+                    <View style={styles.thumbLikesBadge}>
+                      <Ionicons name="heart" size={10} color="#EF4444" />
+                      <Text style={styles.thumbLikesText}>{post.likes_count}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
             </View>
-          </View>
-          <Text style={styles.streakEncourage}>
-            {progress.streak > 0 ? 'Consistency is key! 🔥' : 'Start your streak today!'}
-          </Text>
-        </Card>
-      </View>
-
-      {/* 3. Progress Chart */}
-      <Card style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>{t('profile.chart.title')}</Text>
-          <Text style={styles.chartSub}>{t('profile.chart.sub')}</Text>
-        </View>
-        <WeeklyActivityChart
-          completedDays={progress.completedDays}
-          todayIndex={todayIndex}
-        />
-      </Card>
-
-      {/* 4. Premium Card */}
-      {isPremium ? (
-        <Card style={styles.premiumActiveCard}>
-          <View style={styles.premiumTop}>
-            <Ionicons name="diamond" size={22} color="#FF6B00" />
-            <Text style={styles.premiumActiveTitle}>{t('profile.premium.activeTitle')}</Text>
-          </View>
-          <Text style={styles.premiumActiveSub}>{t('profile.premium.activeSub')}</Text>
-        </Card>
-      ) : (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => router.push('/premium')}
-          style={styles.premiumBannerCard}
-        >
-          <View style={styles.premiumBannerTop}>
-            <View style={styles.crownCircle}>
-              <Ionicons name="diamond" size={20} color="#FFFFFF" />
-            </View>
-            <View style={styles.premiumBannerTextWrap}>
-              <Text style={styles.premiumBannerTitle}>{t('profile.premium.bannerTitle')}</Text>
-              <Text style={styles.premiumBannerSub}>{t('profile.premium.bannerSub')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
+          )}
+        </Animated.View>
       )}
 
-      {/* 5. Grouped Settings Sections */}
-      <View style={styles.settingsGroup}>
-        {/* Workout Settings */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/workout-settings')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#FFEAEA' }]}>
-              <Ionicons name="fitness-outline" size={18} color={Colors.primary} />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.workoutSettings')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
+      {/* 6. TAB 2: Fitness Stats & Metrics */}
+      {activeTab === 'stats' && (
+        <Animated.View entering={FadeInDown.duration(250)} style={styles.tabContentContainer}>
+          {/* Level Progress Banner */}
+          <Card style={styles.levelCard}>
+            <View style={styles.levelCardHeader}>
+              <View style={styles.levelBadgeWrap}>
+                <View style={[styles.levelBadge, { backgroundColor: levelInfo.badgeColor }]}>
+                  <Ionicons name="shield-checkmark" size={13} color="#FFFFFF" />
+                  <Text style={styles.levelBadgeText}>{levelInfo.currentLevel}</Text>
+                </View>
+                <Text style={styles.levelPointsSubtitle}>
+                  {totalLifetimePoints.toLocaleString()} lifetime points
+                </Text>
+              </View>
 
-        {/* General Settings */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/general-settings')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#EBF3FF' }]}>
-              <Ionicons name="options-outline" size={18} color="#208AEF" />
+              <TouchableOpacity
+                style={styles.viewLeaderboardBtn}
+                onPress={() => router.push('/community/leaderboard' as any)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.viewLeaderboardText}>Leaderboard</Text>
+                <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.generalSettings')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
 
-        {/* Language */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/language')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#FFF5E5' }]}>
-              <Ionicons name="globe-outline" size={18} color="#FF8A1F" />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.language')}</Text>
-          </View>
-          <View style={styles.rowRightBadge}>
-            <Text style={styles.rowRightText}>English</Text>
-            <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-          </View>
-        </TouchableOpacity>
-      </View>
+            <View style={styles.levelProgressSection}>
+              <View style={styles.levelProgressHeader}>
+                <Text style={styles.levelProgressLabel}>
+                  {levelInfo.nextLevel ? `Next Tier: ${levelInfo.nextLevel}` : 'Top Tier Unlocked 👑'}
+                </Text>
+                <Text style={styles.levelProgressRatio}>
+                  {levelInfo.nextLevel ? `${totalLifetimePoints} / ${levelInfo.nextPoints} pts` : `${totalLifetimePoints} pts`}
+                </Text>
+              </View>
 
-      {/* Support & Ads */}
-      <View style={styles.settingsGroup}>
-        {/* Feedback */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/feedback')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#F0EBF9' }]}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#7B42BC" />
+              <View style={styles.levelProgressTrack}>
+                <View
+                  style={[
+                    styles.levelProgressFill,
+                    {
+                      width: `${Math.max(4, levelInfo.progressPercent)}%`,
+                      backgroundColor: levelInfo.badgeColor,
+                    },
+                  ]}
+                />
+              </View>
             </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.feedback')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
 
-        {/* Rate Us */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleRateUs}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#FFFBE6' }]}>
-              <Ionicons name="star-outline" size={18} color="#F5A623" />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.rateUs')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.weekPointsBanner}
+              onPress={() => router.push('/community/league' as any)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.weekPointsLeft}>
+                <Ionicons name="trophy" size={20} color="#EAB308" />
+                <View>
+                  <Text style={styles.weekPointsTitle}>
+                    {profile?.league_tier || 'Bronze'} League Score
+                  </Text>
+                  <Text style={styles.weekPointsSub}>Mon - Sun UTC • Weekly reset</Text>
+                </View>
+              </View>
+              <View style={styles.weekPointsRight}>
+                <Text style={styles.weekPointsVal}>{weeklyPoints}</Text>
+                <Text style={styles.weekPointsLabel}>pts</Text>
+              </View>
+            </TouchableOpacity>
+          </Card>
 
-        {/* Remove Ads */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/remove-ads')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#E8F5E9' }]}>
-              <Ionicons name="ban-outline" size={18} color="#2E7D32" />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.removeAds')}</Text>
-          </View>
-          <View style={styles.rowRightBadge}>
-            {settings.adsRemoved || isPremium ? (
-              <Text style={styles.activeTag}>REMOVED</Text>
-            ) : null}
-            <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-          </View>
-        </TouchableOpacity>
-      </View>
+          {/* 6 Metric Tiles */}
+          <View style={styles.statsGrid}>
+            <Card style={styles.statTile}>
+              <Ionicons name="speedometer-outline" size={20} color={Colors.primary} />
+              <Text style={styles.statVal}>{displayCurrentWeight}</Text>
+              <Text style={styles.statLabel}>{t('profile.stats.currentWeight')}</Text>
+            </Card>
 
-      {/* About */}
-      <View style={styles.settingsGroup}>
-        {/* Privacy Policy */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/privacy')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textDark} />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.privacy')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
+            <Card style={styles.statTile}>
+              <Ionicons name="flag-outline" size={20} color={Colors.accent} />
+              <Text style={styles.statVal}>{displayGoalWeight}</Text>
+              <Text style={styles.statLabel}>{t('profile.stats.goalWeight')}</Text>
+            </Card>
 
-        {/* Terms of Service */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/profile/terms')}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
-              <Ionicons name="document-text-outline" size={18} color={Colors.textDark} />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.terms')}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
+            <Card style={styles.statTile}>
+              <Ionicons name="flame-outline" size={20} color="#FF5A00" />
+              <Text style={styles.statVal}>{totalCalories} kcal</Text>
+              <Text style={styles.statLabel}>{t('profile.stats.caloriesBurned')}</Text>
+            </Card>
 
-        {/* App Version */}
-        <View style={styles.settingsRow}>
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
-              <Ionicons name="information-circle-outline" size={18} color={Colors.textDark} />
-            </View>
-            <Text style={styles.settingsRowLabel}>{t('profile.sections.version')}</Text>
-          </View>
-          <Text style={styles.versionText}>v1.0.0 (Build 57)</Text>
-        </View>
+            <Card style={styles.statTile}>
+              <Ionicons name="barbell-outline" size={20} color={Colors.primary} />
+              <Text style={styles.statVal}>{totalWorkouts}</Text>
+              <Text style={styles.statLabel}>{t('profile.stats.workoutsDone')}</Text>
+            </Card>
 
-        {/* Delete Account & Data */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => setShowDeleteModal(true)}
-          style={styles.settingsRow}
-        >
-          <View style={styles.settingsRowLeft}>
-            <View style={[styles.settingsIconWrap, { backgroundColor: '#FFEBEE' }]}>
-              <Ionicons name="trash-outline" size={18} color="#D32F2F" />
+            <Card style={styles.statTile}>
+              <Ionicons name="fitness-outline" size={20} color="#10B981" />
+              <Text style={styles.statVal}>{bmi}</Text>
+              <Text style={styles.statLabel}>{bmiCategory}</Text>
+            </Card>
+
+            <Card style={styles.statTile}>
+              <Ionicons name="water-outline" size={20} color="#0284C7" />
+              <Text style={styles.statVal}>{metrics.waterIntakeMl} ml</Text>
+              <Text style={styles.statLabel}>Water Today</Text>
+            </Card>
+          </View>
+
+          {/* Streak Card */}
+          <Card style={styles.streakTile}>
+            <View style={styles.streakLeft}>
+              <View style={styles.streakIconCircle}>
+                <Ionicons name="flame" size={24} color="#FF5A00" />
+              </View>
+              <View>
+                <Text style={styles.streakVal}>{progress.streak} Days</Text>
+                <Text style={styles.streakLabel}>{t('profile.stats.currentStreak')}</Text>
+              </View>
             </View>
-            <Text style={[styles.settingsRowLabel, { color: '#D32F2F', fontWeight: '600' }]}>
-              Delete my account and data
+            <Text style={styles.streakEncourage}>
+              {progress.streak > 0 ? 'Consistency is key! 🔥' : 'Start your streak today!'}
             </Text>
+          </Card>
+
+          {/* Weekly Progress Chart */}
+          <Card style={styles.chartCard}>
+            <View style={styles.chartHeader}>
+              <Text style={styles.chartTitle}>{t('profile.chart.title')}</Text>
+              <Text style={styles.chartSub}>{t('profile.chart.sub')}</Text>
+            </View>
+            <WeeklyActivityChart
+              completedDays={progress.completedDays}
+              todayIndex={todayIndex}
+            />
+          </Card>
+        </Animated.View>
+      )}
+
+      {/* 7. TAB 3: Settings & Preferences */}
+      {activeTab === 'settings' && (
+        <Animated.View entering={FadeInDown.duration(250)} style={styles.tabContentContainer}>
+          {/* Premium Card */}
+          {isPremium ? (
+            <Card style={styles.premiumActiveCard}>
+              <View style={styles.premiumTop}>
+                <Ionicons name="diamond" size={22} color="#FF6B00" />
+                <Text style={styles.premiumActiveTitle}>{t('profile.premium.activeTitle')}</Text>
+              </View>
+              <Text style={styles.premiumActiveSub}>{t('profile.premium.activeSub')}</Text>
+            </Card>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push('/premium')}
+              style={styles.premiumBannerCard}
+            >
+              <View style={styles.premiumBannerTop}>
+                <View style={styles.crownCircle}>
+                  <Ionicons name="diamond" size={20} color="#FFFFFF" />
+                </View>
+                <View style={styles.premiumBannerTextWrap}>
+                  <Text style={styles.premiumBannerTitle}>{t('profile.premium.bannerTitle')}</Text>
+                  <Text style={styles.premiumBannerSub}>{t('profile.premium.bannerSub')}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Workout & App Preferences */}
+          <View style={styles.settingsGroup}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/workout-settings')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#FFEAEA' }]}>
+                  <Ionicons name="fitness-outline" size={18} color={Colors.primary} />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.workoutSettings')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/general-settings')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#EBF3FF' }]}>
+                  <Ionicons name="options-outline" size={18} color="#208AEF" />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.generalSettings')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/language')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#FFF5E5' }]}>
+                  <Ionicons name="globe-outline" size={18} color="#FF8A1F" />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.language')}</Text>
+              </View>
+              <View style={styles.rowRightBadge}>
+                <Text style={styles.rowRightText}>English</Text>
+                <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+              </View>
+            </TouchableOpacity>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
-        </TouchableOpacity>
-      </View>
 
-      {/* 6. Log Out & Reset All Data */}
-      <View style={styles.actionsSection}>
-        <Button
-          title={t('profile.actions.logout')}
-          variant="secondary"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        />
+          {/* Support & Ratings */}
+          <View style={styles.settingsGroup}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/feedback')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#F0EBF9' }]}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={18} color="#7B42BC" />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.feedback')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
 
-        {isTestToolsEnabled() && (
-          <TouchableOpacity
-            onPress={() => setShowResetModal(true)}
-            style={styles.resetLink}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.resetLinkText}>{t('profile.actions.resetData')}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleRateUs}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#FFFBE6' }]}>
+                  <Ionicons name="star-outline" size={18} color="#F5A623" />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.rateUs')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/remove-ads')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#E8F5E9' }]}>
+                  <Ionicons name="ban-outline" size={18} color="#2E7D32" />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.removeAds')}</Text>
+              </View>
+              <View style={styles.rowRightBadge}>
+                {settings.adsRemoved || isPremium ? (
+                  <Text style={styles.activeTag}>REMOVED</Text>
+                ) : null}
+                <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Legal & Version */}
+          <View style={styles.settingsGroup}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/privacy')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color={Colors.textDark} />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.privacy')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/terms')}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
+                  <Ionicons name="document-text-outline" size={18} color={Colors.textDark} />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.terms')}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+
+            <View style={styles.settingsRow}>
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#F5F5F5' }]}>
+                  <Ionicons name="information-circle-outline" size={18} color={Colors.textDark} />
+                </View>
+                <Text style={styles.settingsRowLabel}>{t('profile.sections.version')}</Text>
+              </View>
+              <Text style={styles.versionText}>v1.0.0 (Build 58)</Text>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setShowDeleteModal(true)}
+              style={styles.settingsRow}
+            >
+              <View style={styles.settingsRowLeft}>
+                <View style={[styles.settingsIconWrap, { backgroundColor: '#FFEBEE' }]}>
+                  <Ionicons name="trash-outline" size={18} color="#D32F2F" />
+                </View>
+                <Text style={[styles.settingsRowLabel, { color: '#D32F2F', fontWeight: '600' }]}>
+                  Delete my account and data
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textGrey} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Logout & Reset Buttons */}
+          <View style={styles.actionsSection}>
+            <Button
+              title={t('profile.actions.logout')}
+              variant="secondary"
+              onPress={handleLogout}
+              style={styles.logoutButton}
+            />
+
+            {isTestToolsEnabled() && (
+              <TouchableOpacity
+                onPress={() => setShowResetModal(true)}
+                style={styles.resetLink}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.resetLinkText}>{t('profile.actions.resetData')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
+      )}
 
       {/* Reset Confirmation Modal */}
       <Modal visible={showResetModal} transparent animationType="fade">
@@ -709,88 +919,560 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 88, // Tab bar clearance
+    paddingBottom: 96,
   },
-  headerCard: {
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  headerRow: {
+  // Instagram Top Bar
+  igTopBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.sm,
   },
-  avatarCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: Colors.primary,
+  igTopBarLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  avatarText: {
-    fontSize: Typography.sizes.xl,
-    fontWeight: Typography.weights.heavy,
-    color: '#FFFFFF',
-  },
-  headerInfo: {
     flex: 1,
   },
-  nameRow: {
+  igUsernameText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textDark,
+    letterSpacing: -0.3,
+    maxWidth: 180,
+  },
+  verifiedIcon: {
+    marginLeft: 5,
+  },
+  igTopBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  igTopIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Instagram Profile Header Card
+  igProfileHeader: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  igAvatarAndStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  igAvatarContainer: {
+    position: 'relative',
+  },
+  igStoryRing: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    padding: 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igAvatarInnerBorder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 38,
+    backgroundColor: '#FFFFFF',
+    padding: 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+    backgroundColor: '#E5E7EB',
+  },
+  igAvatarCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igAvatarInitial: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  igFlameBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: '#FF5A00',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igStatsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginLeft: Spacing.sm,
+  },
+  igStatColumn: {
+    alignItems: 'center',
+    minWidth: 50,
+  },
+  igStatNumber: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: Colors.textDark,
+  },
+  igStatLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.textGrey,
+    marginTop: 2,
+  },
+
+  // Bio Section
+  igBioSection: {
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.md,
+  },
+  igNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  userName: {
-    fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.heavy,
+  igDisplayName: {
+    fontSize: 15,
+    fontWeight: '800',
     color: Colors.textDark,
   },
-  proPill: {
+  proBadge: {
     backgroundColor: '#FFF2E5',
     borderWidth: 1,
     borderColor: '#FF8A1F',
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 1,
+    borderRadius: 8,
   },
-  proPillText: {
+  proBadgeText: {
     color: '#FF6B00',
     fontSize: 9,
-    fontWeight: Typography.weights.heavy,
+    fontWeight: '800',
   },
-  freePill: {
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  freePillText: {
-    color: Colors.textGrey,
-    fontSize: 9,
-    fontWeight: Typography.weights.bold,
-  },
-  userSub: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textGrey,
+  igCategoryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.primary,
     marginTop: 2,
   },
-  editProfileBtn: {
+  igBioText: {
+    fontSize: 13,
+    color: Colors.textDark,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  igLinkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFEAEA',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
+    marginTop: 4,
   },
-  editProfileBtnText: {
+  igLinkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+
+  // Action Buttons: Follow / Edit / Share
+  igActionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  igFollowBtn: {
+    flex: 1,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igPrimaryFollowBtn: {
+    backgroundColor: Colors.primary,
+  },
+  igFollowingBtn: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  igBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  igFollowBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  igFollowingBtnText: {
+    color: Colors.textDark,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  igEditBtn: {
+    flex: 1,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  igEditBtnText: {
+    color: Colors.textDark,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  igIconSquareBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Story Highlights
+  igHighlightsSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  igHighlightsScroll: {
+    paddingHorizontal: Spacing.md,
+    gap: 16,
+  },
+  igHighlightItem: {
+    alignItems: 'center',
+    width: 60,
+  },
+  igAddHighlightRing: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    marginBottom: 4,
+  },
+  igHighlightRing: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1.5,
+    padding: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  igHighlightIconCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  igHighlightTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textDark,
+    textAlign: 'center',
+  },
+
+  // 3-Tab Bar
+  igTabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  igTabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 3,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  igTabItemActive: {
+    borderBottomColor: Colors.primary,
+  },
+  igTabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.textGrey,
+  },
+  igTabLabelActive: {
     color: Colors.primary,
-    fontSize: Typography.sizes.xs,
-    fontWeight: Typography.weights.bold,
+    fontWeight: '700',
   },
-  statsSection: {
+
+  tabContentContainer: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+  },
+
+  // Tab 1: Posts Grid
+  postsHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  postsSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  shareNewPostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.full,
+  },
+  shareNewPostText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  postsLoader: {
+    paddingVertical: Spacing.xl,
+    alignItems: 'center',
+  },
+  postsEmptyState: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: '#FAFAFA',
+    borderRadius: BorderRadius.card,
+    marginVertical: Spacing.sm,
+  },
+  postsEmptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FFEAEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  postsEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.textDark,
+    marginTop: Spacing.xs,
+  },
+  postsEmptySub: {
+    fontSize: 12,
+    color: Colors.textGrey,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 4,
+    maxWidth: 240,
+  },
+  postsShareBtn: {
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 9,
+    borderRadius: BorderRadius.full,
+  },
+  postsShareBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  postsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: GRID_GAP,
+  },
+  postThumbWrapper: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F3F4F6',
+  },
+  postThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbVisibilityBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 6,
+    padding: 3,
+  },
+  thumbLikesBadge: {
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  thumbLikesText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  // Tab 2: Stats
+  levelCard: {
     marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.card,
+  },
+  levelCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  levelBadgeWrap: {
+    gap: 4,
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  levelBadgeText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  levelPointsSubtitle: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.textGrey,
+    fontWeight: '500',
+  },
+  viewLeaderboardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#FFEAEA',
+    borderRadius: 8,
+  },
+  viewLeaderboardText: {
+    fontSize: Typography.sizes.xs,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  levelProgressSection: {
+    marginVertical: 4,
+  },
+  levelProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  levelProgressLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  levelProgressRatio: {
+    fontSize: 11,
+    color: Colors.textGrey,
+    fontWeight: '600',
+  },
+  levelProgressTrack: {
+    height: 8,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  levelProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  weekPointsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  weekPointsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  weekPointsTitle: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: '700',
+    color: Colors.textDark,
+  },
+  weekPointsSub: {
+    fontSize: 10,
+    color: Colors.textGrey,
+  },
+  weekPointsRight: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+  },
+  weekPointsVal: {
+    fontSize: Typography.sizes.md,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  weekPointsLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textGrey,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -823,6 +1505,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF9F5',
     borderColor: '#FFE0CC',
     borderWidth: 1.5,
+    marginBottom: Spacing.md,
   },
   streakLeft: {
     flexDirection: 'row',
@@ -868,6 +1551,8 @@ const styles = StyleSheet.create({
     color: Colors.textGrey,
     marginTop: 2,
   },
+
+  // Tab 3: Settings
   premiumActiveCard: {
     backgroundColor: '#FFFBF7',
     borderColor: '#FFD9B3',
@@ -992,6 +1677,8 @@ const styles = StyleSheet.create({
     color: '#FF3B30',
     fontWeight: Typography.weights.semiBold,
   },
+
+  // Modals
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1058,259 +1745,5 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: '#FFFFFF',
     fontSize: Typography.sizes.sm,
-  },
-  profileAvatarImg: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E5E7EB',
-  },
-  userUsername: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primary,
-    marginTop: 2,
-  },
-  userBio: {
-    fontSize: 12,
-    color: Colors.textGrey,
-    marginTop: 3,
-    lineHeight: 16,
-  },
-  countsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: Spacing.md,
-    marginTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  countItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  countValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textDark,
-  },
-  countLabel: {
-    fontSize: 12,
-    color: Colors.textGrey,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  countDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E5E7EB',
-  },
-  postsSectionCard: {
-    marginBottom: Spacing.lg,
-    padding: Spacing.md,
-  },
-  postsHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  postsTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  postsSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textDark,
-  },
-  shareNewPostText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  postsLoader: {
-    paddingVertical: Spacing.xl,
-    alignItems: 'center',
-  },
-  postsEmptyState: {
-    alignItems: 'center',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-  },
-  postsEmptyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textDark,
-    marginTop: Spacing.xs,
-  },
-  postsEmptySub: {
-    fontSize: 12,
-    color: Colors.textGrey,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 4,
-    maxWidth: 240,
-  },
-  postsShareBtn: {
-    marginTop: Spacing.md,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-  },
-  postsShareBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  postsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 4,
-  },
-  postThumbWrapper: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: BorderRadius.sm,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#F3F4F6',
-  },
-  postThumbImage: {
-    width: '100%',
-    height: '100%',
-  },
-  thumbVisibilityBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8,
-    padding: 3,
-  },
-  // Step 9d Level Tier Card
-  levelCard: {
-    marginBottom: Spacing.md,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.card,
-  },
-  levelCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  levelBadgeWrap: {
-    gap: 4,
-  },
-  levelBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  levelBadgeText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  levelPointsSubtitle: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textGrey,
-    fontWeight: '500',
-  },
-  viewLeaderboardBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: '#FFEAEA',
-    borderRadius: 8,
-  },
-  viewLeaderboardText: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  levelProgressSection: {
-    marginVertical: 4,
-  },
-  levelProgressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  levelProgressLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.textDark,
-  },
-  levelProgressRatio: {
-    fontSize: 11,
-    color: Colors.textGrey,
-    fontWeight: '600',
-  },
-  levelProgressTrack: {
-    height: 8,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  levelProgressFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  levelProgressFooter: {
-    fontSize: 10,
-    color: Colors.textGrey,
-    marginTop: 6,
-  },
-  weekPointsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  weekPointsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  weekPointsTitle: {
-    fontSize: Typography.sizes.xs,
-    fontWeight: '700',
-    color: Colors.textDark,
-  },
-  weekPointsSub: {
-    fontSize: 10,
-    color: Colors.textGrey,
-  },
-  weekPointsRight: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-  },
-  weekPointsVal: {
-    fontSize: Typography.sizes.md,
-    fontWeight: '800',
-    color: Colors.primary,
-  },
-  weekPointsLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textGrey,
   },
 });

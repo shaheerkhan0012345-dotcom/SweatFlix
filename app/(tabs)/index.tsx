@@ -14,10 +14,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
+import Svg, { Circle } from 'react-native-svg';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { HomeTodayWorkoutCard } from '../../components/home/HomeTodayWorkoutCard';
+import { HomeWaterChart } from '../../components/home/HomeWaterChart';
 import { HomeWorkoutChart } from '../../components/home/HomeWorkoutChart';
 import { HomeWeightChart } from '../../components/home/HomeWeightChart';
 import { ProMembershipCard } from '../../components/ProMembershipCard';
@@ -1465,25 +1467,61 @@ export default function HomeScreen() {
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
         >
-          {/* Left: Bar scale visual */}
+          {/* Left: Dynamic Bar scale visual */}
           <View style={styles.waterBarsCol}>
-            {[6, 4, 2, 0].map((num) => (
-              <View key={num} style={styles.barScaleRow}>
-                <Text style={styles.barScaleNum}>{num}</Text>
-                <View style={[styles.barScaleDash, { backgroundColor: colors.border }]} />
-              </View>
-            ))}
+            {[6, 4, 2, 0].map((num) => {
+              const currentLitersNum = parseFloat(waterConsumedLiters) || 0;
+              const isActive = num === 0 ? currentLitersNum > 0 : currentLitersNum >= num;
+              return (
+                <View key={num} style={styles.barScaleRow}>
+                  <Text style={[styles.barScaleNum, isActive && { color: '#0284C7', fontWeight: '800' }]}>
+                    {num}
+                  </Text>
+                  <View
+                    style={[
+                      styles.barScaleDash,
+                      {
+                        backgroundColor: isActive ? '#0284C7' : colors.border,
+                        height: isActive ? 3 : 2,
+                      },
+                    ]}
+                  />
+                </View>
+              );
+            })}
           </View>
 
-          {/* Right: Circular Gauge */}
+          {/* Right: Circular Gauge with Animated SVG Progress Ring */}
           <View style={styles.waterGaugeCol}>
             <View
               style={[
                 styles.waterCircularRing,
-                { backgroundColor: isDarkMode ? '#14314A' : '#F0F9FF' },
+                { backgroundColor: isDarkMode ? '#0F1E36' : '#F0F9FF' },
               ]}
             >
-              <Text style={styles.waterPercentText}>{waterPercent}.00%</Text>
+              <Svg width={80} height={80} style={StyleSheet.absoluteFill}>
+                <Circle
+                  cx={40}
+                  cy={40}
+                  r={35}
+                  stroke={isDarkMode ? '#1E2E4A' : '#E0F2FE'}
+                  strokeWidth={5}
+                  fill="transparent"
+                />
+                <Circle
+                  cx={40}
+                  cy={40}
+                  r={35}
+                  stroke="#0284C7"
+                  strokeWidth={5}
+                  fill="transparent"
+                  strokeDasharray={220}
+                  strokeDashoffset={220 - (220 * Math.min(100, waterPercent)) / 100}
+                  strokeLinecap="round"
+                  transform="rotate(-90 40 40)"
+                />
+              </Svg>
+              <Text style={styles.waterPercentText}>{waterPercent}%</Text>
               <Text style={[styles.waterGoalSub, { color: colors.textSecondary }]}>Goal</Text>
             </View>
 
@@ -1520,6 +1558,9 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* 10b. Weekly Hydration Consistency Chart (100% Synchronized) */}
+        <HomeWaterChart />
 
         {/* 11. Daily Workout Consistency Chart */}
         <HomeWorkoutChart />
